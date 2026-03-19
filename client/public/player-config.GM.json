@@ -1,0 +1,10 @@
+{
+  "_comment": "Config du Game Master. Renomme en player-config.json sur le PC du GM.",
+  "name": "Maître du Donjon",
+  "color": "#8B0000",
+  "avatarUrl": "",
+  "isGM": true,
+  "gmPassword": "master1234",
+  "hp": 999,
+  "hpMax": 999
+}

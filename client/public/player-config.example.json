@@ -1,0 +1,10 @@
+{
+  "_comment": "Template joueur — copie ce fichier en player-config.json et remplis tes infos",
+  "name": "Thorin Écudefière",
+  "color": "#FFD700",
+  "avatarUrl": "",
+  "class": "Guerrier",
+  "hp": 40,
+  "hpMax": 40,
+  "isGM": false
+}
