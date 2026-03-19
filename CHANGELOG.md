@@ -9,10 +9,31 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/lang/fr/).
 
 ## [Unreleased]
 
-### À venir (Phase 0)
-- Scaffold du projet (server/ et client/)
-- Structure Node.js + Colyseus + Phaser 3 + TypeScript
-- Hello World synchronisé : 2 clients, un point qui bouge
+---
+
+## [0.2.0] — Phase 1a : Tileset 0x72 + Rendu Tiled + Map de test
+
+### Ajouté
+- Intégration tileset 0x72 Dungeon (`client/public/tilesets/0x72_dungeon.png`) — placeholder transparent 16×16 fourni, remplacer par le vrai tileset
+- Rendu carte Tiled dans `DungeonScene.ts` (remplacement de la grille placeholder)
+  - `preload()` : chargement du tileset image + JSON Tiled
+  - `create()` : `make.tilemap`, `addTilesetImage`, layers `sol` / `murs`, collisions
+  - Zoom initial 2.5× pour tuiles 16px
+  - Caméra bornée aux dimensions réelles de la map (`map.widthInPixels`)
+- Map de test `client/public/maps/grande-salle.json` (40×40 cases, salle ouverte, 4 layers)
+- Architecture `client/public/maps/` + index `maps/index.json`
+- Guide créateur de maps `docs/TILED_GUIDE.md` (Tiled Map Editor, tileset 0x72, layers, export, distribution)
+- Collisions activées sur le layer `murs` via `setCollisionByExclusion([-1])`
+
+### Modifié
+- `DungeonScene.ts` : `TILE_SIZE` 48 → 16 (taille réelle des tuiles du tileset)
+- `docs/ROADMAP.md` : Phase 0 ✅ Terminé, Phase 1a ✅ Terminé, Phase 1b ⬜ À faire, ajout section "Décisions d'architecture — Maps"
+- `docs/ARCHITECTURE.md` : mise à jour structure dossiers, ajout section "Gestion des maps"
+- `README.md` : badge Phase 1a Terminé, fonctionnalités mises à jour, lien vers `TILED_GUIDE.md`
+
+### Supprimé
+- Méthode `_drawGrid()` dans `DungeonScene.ts` (remplacée par le rendu Tiled)
+- Constantes `GRID_COLS` / `GRID_ROWS` (remplacées par `map.widthInPixels` / `map.heightInPixels`)
 
 ---
 

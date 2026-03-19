@@ -1,6 +1,6 @@
 # 🎲 TableTopeke
 
-![Phase 0 - En cours](https://img.shields.io/badge/Phase%200-En%20cours-blue)
+![Phase 1a - Terminé](https://img.shields.io/badge/Phase%201a-Termin%C3%A9-brightgreen)
 ![Node.js](https://img.shields.io/badge/Node.js-LTS%2018%2F20-339933?logo=node.js)
 ![Colyseus](https://img.shields.io/badge/Colyseus-0.15-ff6b35)
 ![Phaser 3](https://img.shields.io/badge/Phaser%203-3.x-8a2be2)
@@ -11,14 +11,14 @@
 
 ---
 
-## 🧩 Fonctionnalités prévues
+## 🧩 Fonctionnalités
 
-- 🗺️ **Carte de donjon top-down** chargée depuis Tiled Map Editor (format JSON)
+- 🗺️ **Rendu carte Tiled intégré** — tileset 0x72 Dungeon, layers `sol` / `murs` / `tokens`, collisions automatiques
 - 👥 **Multijoueur temps réel** — jusqu'à 5 joueurs simultanés via WebSocket
 - 🔐 **Gestion des rôles** — Game Master (tous droits) vs Joueur (son token uniquement)
-- 🌫️ **Fog of War double mode** — révélation globale par le GM + ligne de vue par joueur
-- ⚔️ **Système de combat** — initiative, HP, tours, mesure de distances
-- 📏 **Échelle configurable** — 1 case = X mètres, outil de mesure clic-glisser
+- 🌫️ **Fog of War double mode** — révélation globale par le GM + ligne de vue par joueur *(prévu)*
+- ⚔️ **Système de combat** — initiative, HP, tours, mesure de distances *(prévu)*
+- 📏 **Échelle configurable** — 1 case = X mètres, outil de mesure clic-glisser *(prévu)*
 - 🎨 **Personnalisation joueur** — nom, couleur, avatar, classe via `player-config.json`
 - 📦 **Distribution simple** — lancement via `start.bat` / `start.sh` (Option A), packaging `.exe` prévu (Option B)
 
@@ -59,6 +59,7 @@ Les **joueurs** n'ont rien à installer : ils ouvrent simplement l'URL fournie p
 |---------|-------------|
 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | Suivi des phases du projet avec statuts |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Architecture technique détaillée |
+| [`docs/TILED_GUIDE.md`](docs/TILED_GUIDE.md) | Guide créateur de maps Tiled (tileset, layers, export JSON) |
 | [`docs/INSTALL.md`](docs/INSTALL.md) | Guide d'installation complet |
 | [`docs/GAMEPLAY.md`](docs/GAMEPLAY.md) | Mécaniques de jeu et rôles |
 | [`CHANGELOG.md`](CHANGELOG.md) | Historique des versions |
@@ -69,4 +70,4 @@ Les **joueurs** n'ont rien à installer : ils ouvrent simplement l'URL fournie p
 
 Le projet suit une roadmap en phases successives. Consultez [`docs/ROADMAP.md`](docs/ROADMAP.md) pour l'état d'avancement détaillé de chaque fonctionnalité.
 
-**Phase actuelle : Phase 0 — Setup & Scaffold** 🔄
+**Phase actuelle : Phase 1a — Tileset 0x72 + Rendu Tiled** ✅

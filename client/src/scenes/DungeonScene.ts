@@ -1,12 +1,13 @@
 import { network } from "../network/ColyseusClient";
 import type { Token } from "../../../server/src/schema/DungeonState";
 
-// Taille d'une case en pixels (équivalent du Grid Cell Size dans Unity)
-const TILE_SIZE = 48;
+// Taille d'une case en pixels — correspond aux tuiles 16×16 du tileset 0x72 Dungeon
+// (équivalent du Grid Cell Size dans Unity)
+const TILE_SIZE = 16;
 
-// Dimensions de la grille en nombre de cases
-const GRID_COLS = 50;
-const GRID_ROWS = 50;
+// Zoom initial appliqué à la caméra pour que les tuiles 16px soient lisibles à l'écran
+// (équivalent de Camera.orthographicSize Unity)
+const INITIAL_ZOOM = 2.5;
 
 // DungeonScene — scène de jeu principale
 // Équivalent d'une GameScene Unity avec GameObjects synchronisés via Colyseus
@@ -27,41 +28,49 @@ export class DungeonScene extends Phaser.Scene {
     super({ key: "DungeonScene" });
   }
 
+  // ── Chargement des assets ────────────────────────────────────────────────
+  // Équivalent d'un AssetDatabase Unity — chargé avant le create()
+  preload(): void {
+    this.load.image("0x72_dungeon", "tilesets/0x72_dungeon.png");
+    this.load.tilemapTiledJSON("grande-salle", "maps/grande-salle.json");
+  }
+
   create(): void {
-    // ── Grille placeholder ──────────────────────────────────────────────────
-    this._drawGrid();
+    // ── Carte Tiled ──────────────────────────────────────────────────────────
+    // Équivalent d'un Tilemap Unity chargé depuis un fichier .asset
+    const map     = this.make.tilemap({ key: "grande-salle" });
+    const tileset = map.addTilesetImage("0x72_dungeon", "0x72_dungeon");
+
+    if (!tileset) {
+      console.error("Impossible de charger le tileset 0x72_dungeon. Vérifiez client/public/tilesets/0x72_dungeon.png.");
+      return;
+    }
+
+    // Layers dans l'ordre (sol en dessous, murs au-dessus)
+    // Équivalent des Sorting Layers Unity
+    map.createLayer("sol",  tileset, 0, 0);
+    const murLayer = map.createLayer("murs", tileset, 0, 0);
+
+    if (!murLayer) {
+      console.error("Layer 'murs' introuvable dans la map chargée. Vérifiez que le layer est bien nommé 'murs' dans Tiled.");
+      return;
+    }
+
+    // Collisions sur le layer murs — toutes les tuiles sauf les cases vides (-1)
+    // Équivalent d'un TilemapCollider2D Unity
+    murLayer.setCollisionByExclusion([-1]);
 
     // ── Caméra ──────────────────────────────────────────────────────────────
-    // setBounds équivalent à Cinemachine Confiner d'Unity
-    this.cameras.main.setBounds(0, 0, GRID_COLS * TILE_SIZE, GRID_ROWS * TILE_SIZE);
-    this.cameras.main.setZoom(1);
+    // Borner la caméra aux dimensions réelles de la map — équivalent Cinemachine Confiner
+    this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
+    // Zoom initial pour que les tuiles 16px soient lisibles
+    this.cameras.main.setZoom(INITIAL_ZOOM);
 
     // ── Synchronisation des tokens Colyseus ─────────────────────────────────
     this._syncTokens();
 
     // ── Gestion des inputs ──────────────────────────────────────────────────
     this._setupInput();
-  }
-
-  // ── Dessin de la grille ──────────────────────────────────────────────────
-  private _drawGrid(): void {
-    const g = this.add.graphics();
-    g.lineStyle(1, 0x2a2a4e, 0.8);
-
-    for (let col = 0; col <= GRID_COLS; col++) {
-      g.moveTo(col * TILE_SIZE, 0);
-      g.lineTo(col * TILE_SIZE, GRID_ROWS * TILE_SIZE);
-    }
-    for (let row = 0; row <= GRID_ROWS; row++) {
-      g.moveTo(0,                   row * TILE_SIZE);
-      g.lineTo(GRID_COLS * TILE_SIZE, row * TILE_SIZE);
-    }
-    g.strokePath();
-
-    // Fond de la carte
-    g.fillStyle(0x12121f, 1);
-    g.fillRect(0, 0, GRID_COLS * TILE_SIZE, GRID_ROWS * TILE_SIZE);
-    g.setDepth(-1);
   }
 
   // ── Synchronisation Colyseus → Phaser ───────────────────────────────────
