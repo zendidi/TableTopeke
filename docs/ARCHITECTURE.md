@@ -258,9 +258,9 @@ Tiled Map Editor (externe)
 - Ce fichier sera lu par le sélecteur de map GM (Phase 1b)
 - Ajouter une entrée ici pour chaque nouvelle map créée dans Tiled
 
-### Message `LOAD_MAP` (Phase 1b)
+### Message `LOAD_MAP` (Phase 1b — Implémenté)
 
-À venir en Phase 1b — permettra au GM de changer de map en cours de session :
+Le GM peut changer de map en cours de session depuis le panel HTML overlay :
 
 ```
 GM (navigateur)           Serveur (Colyseus)        Joueurs (navigateurs)
@@ -268,18 +268,24 @@ GM (navigateur)           Serveur (Colyseus)        Joueurs (navigateurs)
   ├─ LOAD_MAP { mapName } ──────▶│                         │
   │                              ├─ Validation droits GM   │
   │                              ├─ state.currentMap = ... │
+  │                              ├─ tokens → tileX/Y = 20  │
   │                              ├─ Delta broadcast ──────▶│
   │                              │                   ┌─────┤
   │                              │                   │ DungeonScene
-  │                              │                   │ charge la nouvelle map
-  │                              │                   │ repositionne les tokens
+  │                              │                   │ state.listen("currentMap")
+  │                              │                   │ → _loadMap(newMap)
+  │                              │                   │ → destroy anciens layers
+  │                              │                   │ → make.tilemap({ key })
+  │                              │                   │ → createLayer sol/murs
   │                              │                   └─────▶ Map affichée
 ```
 
-Impact sur l'état Colyseus :
-- `DungeonState.currentMap: string` — nom de la map active
-- Les tokens sont repositionnés au centre de la nouvelle map
-- Le Fog of War est réinitialisé
+Flux complet :
+1. GM sélectionne dans le panel → `network.loadMap(mapName)`
+2. Message `LOAD_MAP { mapName }` envoyé au serveur
+3. Serveur valide le rôle GM, met à jour `state.currentMap`, repositionne les tokens
+4. Colyseus delta broadcast → tous les clients reçoivent le changement
+5. Chaque client écoute `state.listen("currentMap")` → `DungeonScene._loadMap()` rechargée
 
 ---
 

@@ -215,6 +215,39 @@ Chaque joueur configure son expérience via `player-config.json`.
 - Boutons de gestion de l'initiative
 - Actions rapides : reveal zone, reset HP, ...
 
+---
+
+## Changer de map en session
+
+### Rôle requis : 🎭 Game Master uniquement
+
+Le GM peut changer la carte affichée pour tous les joueurs en cours de session, sans rechargement de page.
+
+### Procédure
+
+1. **Ouvrir le Panneau GM** (visible uniquement dans l'onglet GM)
+2. **Localiser la section "🗺️ Map active"**
+3. **Sélectionner** la nouvelle map dans la liste déroulante
+   - Les maps disponibles proviennent de `client/public/maps/index.json`
+4. **Cliquer sur "Charger cette map"**
+
+### Ce qui se passe après
+
+- La nouvelle carte apparaît immédiatement pour **tous les clients connectés** (GM + joueurs)
+- Tous les tokens sont **repositionnés automatiquement** à la case (20, 20)
+- La caméra s'adapte aux dimensions de la nouvelle carte
+- Le changement est synchronisé en temps réel via Colyseus (`LOAD_MAP`)
+
+### Ajouter une nouvelle map
+
+1. Créer la map dans **Tiled Map Editor** (voir `docs/TILED_GUIDE.md`)
+2. Exporter en JSON dans `client/public/maps/`
+3. Ajouter une entrée dans `client/public/maps/index.json` :
+   ```json
+   { "id": "nom-de-la-map", "label": "Nom Affiché", "description": "..." }
+   ```
+4. La map apparaît automatiquement dans le sélecteur du panel GM
+
 ### Indicateurs visuels
 
 | Indicateur | Signification |

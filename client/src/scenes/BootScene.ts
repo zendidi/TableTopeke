@@ -44,6 +44,10 @@ export class BootScene extends Phaser.Scene {
     // Chaque joueur place son player-config.json dans client/public/
     // (voir player-config.example.json pour le template)
     this.load.json("player-config", "player-config.json");
+
+    // ── Chargement de l'index des maps ───────────────────────────────────────
+    // Source de vérité pour la liste des maps disponibles (sélecteur GM Phase 1b)
+    this.load.json("maps-index", "maps/index.json");
   }
 
   create(): void {

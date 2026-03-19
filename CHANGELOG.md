@@ -11,6 +11,31 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/lang/fr/).
 
 ---
 
+## [0.3.0] — Phase 1b : Sélecteur de map GM + LOAD_MAP + sync clients
+
+### Ajouté
+- Panel GM HTML overlay (`client/src/ui/GMPanel.ts`) — visible uniquement si `isGM: true`
+  - Section "🗺️ Map active" : sélecteur de map depuis `maps/index.json`, bouton "Charger cette map"
+  - Section "⚔️ Combat" : boutons Démarrer, Fin, Tour suivant
+  - Section "👁️ Fog of War" : checkboxes Fog global et LOS
+  - Section "📐 Échelle" : input numérique + bouton Appliquer
+- Message Colyseus `LOAD_MAP { mapName: string }` — GM seulement (vérifié côté serveur)
+- `DungeonState.currentMap: string` — nom de la map active synchronisé en temps réel sur tous les clients
+- Méthode `network.loadMap(mapName)` dans `NetworkManager`
+- Rechargement dynamique de carte dans `DungeonScene._loadMap()` sans rechargement de page
+- Repositionnement automatique de tous les tokens à la case (20, 20) à chaque changement de map
+- `tokenContainer` Phaser avec `setDepth(10)` — les tokens restent toujours au-dessus des layers carte
+- Chargement de `maps/index.json` dans `BootScene.preload()` (clé `maps-index`)
+- Pré-chargement dynamique de toutes les maps listées dans `index.json` dans `DungeonScene.preload()`
+
+### Modifié
+- `DungeonScene.ts` : refactorisation — `preload()` dynamique, `create()` avec `_loadMap()`, écoute `currentMap`
+- `docs/ROADMAP.md` : Phase 1b ✅ Terminé
+- `docs/ARCHITECTURE.md` : section LOAD_MAP mise à jour avec flux complet implémenté
+- `docs/GAMEPLAY.md` : ajout section "Changer de map en session"
+
+---
+
 ## [0.2.0] — Phase 1a : Tileset 0x72 + Rendu Tiled + Map de test
 
 ### Ajouté
