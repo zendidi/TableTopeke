@@ -1,0 +1,22 @@
+# Node
+node_modules/
+.env
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Vite
+client/.vite/
+
+# Build
+server/dist/
+client/dist/
+
+# Config locale joueur (chaque joueur a la sienne)
+# Utilise player-config.example.json comme template
+client/public/player-config.json
