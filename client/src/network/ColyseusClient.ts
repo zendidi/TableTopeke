@@ -70,6 +70,11 @@ class NetworkManager {
   setTileScale(scale: number): void {
     this.room.send("SET_TILE_SCALE", { scale });
   }
+
+  // Demande au serveur de changer la map active (GM seulement)
+  loadMap(mapName: string): void {
+    this.room.send("LOAD_MAP", { mapName });
+  }
 }
 
 // Export du singleton pour utilisation dans toutes les scènes

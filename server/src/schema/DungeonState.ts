@@ -42,4 +42,7 @@ export class DungeonState extends Schema {
 
   // Taille d'une case en mètres (configurable par le GM, défaut = 1,5m comme D&D 5e)
   @type("number")  tileScale: number = 1.5;
+
+  // Nom de la map active (sans extension .json) — synchronisé en temps réel
+  @type("string")  currentMap: string = "grande-salle";
 }

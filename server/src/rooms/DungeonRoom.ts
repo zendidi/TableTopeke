@@ -4,6 +4,9 @@ import { DungeonState, Player, Token } from "../schema/DungeonState";
 // Mot de passe GM lu depuis les variables d'environnement, fallback sur "master1234"
 const GM_PASSWORD = process.env.GM_PASSWORD ?? "master1234";
 
+// Position de repositionnement des tokens lors d'un changement de map (centre par défaut)
+const DEFAULT_TOKEN_SPAWN = { x: 20, y: 20 };
+
 // Options transmises par le client lors du join
 interface JoinOptions {
   name?: string;
@@ -88,6 +91,26 @@ export class DungeonRoom extends Room<DungeonState> {
       if (typeof data.scale !== "number" || data.scale <= 0) return;
 
       this.state.tileScale = data.scale;
+    });
+
+    // ── LOAD_MAP ─────────────────────────────────────────────────────────────
+    // GM seulement — change la map active et repositionne tous les tokens
+    type LoadMapMsg = { mapName: string };
+    this.onMessage<LoadMapMsg>("LOAD_MAP", (client, msg) => {
+      // Vérification du rôle GM
+      if (client.sessionId !== this.state.gmSessionId) return;
+      if (!msg.mapName || typeof msg.mapName !== "string") return;
+
+      // Mettre à jour l'état partagé → Colyseus broadcast automatiquement
+      this.state.currentMap = msg.mapName;
+
+      // Repositionner tous les tokens au centre de la nouvelle map
+      this.state.tokens.forEach((token) => {
+        token.tileX = DEFAULT_TOKEN_SPAWN.x;
+        token.tileY = DEFAULT_TOKEN_SPAWN.y;
+      });
+
+      console.log(`[MAP] Chargement de la map "${msg.mapName}" par le GM.`);
     });
 
     console.log(`[DungeonRoom] Salle créée — GM_PASSWORD=${GM_PASSWORD === "master1234" ? "(défaut)" : "(custom)"}`);

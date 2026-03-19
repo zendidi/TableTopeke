@@ -17,7 +17,7 @@
 |-------|-------------|--------|
 | **0** | Setup & Scaffold | ✅ Terminé |
 | **1a** | Tileset 0x72 + rendu carte Tiled + map de test | ✅ Terminé |
-| **1b** | Sélecteur de map GM + sync Colyseus `LOAD_MAP` | ⬜ À faire |
+| **1b** | Sélecteur de map GM + sync Colyseus `LOAD_MAP` | ✅ Terminé |
 | **2** | Serveur Colyseus — état & rôles avancés | ⬜ À faire |
 | **3** | Combat & Distances | ⬜ À faire |
 | **4** | Fog of War (Ligne de vue réelle) | ⬜ À faire |
@@ -84,21 +84,23 @@
 
 ---
 
-## Phase 1b — Sélecteur de map GM ⬜ À faire
+## Phase 1b — Sélecteur de map GM ✅ Terminé
 
 ### Tâches
 
-- [ ] Sélecteur de map GM (liste depuis `maps/index.json`)
-- [ ] Message Colyseus `LOAD_MAP { mapName: string }` — GM uniquement
-- [ ] Sync tous les clients au changement de map
-- [ ] Chargement dynamique du JSON Tiled côté Phaser
-- [ ] Repositionnement des tokens au centre de la nouvelle map
+- [x] Sélecteur de map GM (liste depuis `maps/index.json`)
+- [x] Message Colyseus `LOAD_MAP { mapName: string }` — GM uniquement
+- [x] `DungeonState.currentMap` synchronisé en temps réel sur tous les clients
+- [x] Rechargement dynamique du JSON Tiled côté Phaser (sans rechargement de page)
+- [x] Repositionnement de tous les tokens au centre (case 20,20) à chaque changement de map
+- [x] Panel GM HTML overlay : sections Map, Combat, Fog of War, Échelle
 
 ### ✅ Critères de validation
 
 - Le GM peut changer de map en cours de session
 - Tous les clients voient la nouvelle map en < 500ms
-- Les tokens sont repositionnés sur la nouvelle map
+- Les tokens sont repositionnés sur la nouvelle map (case 20,20)
+- Un joueur non-GM ne peut pas déclencher `LOAD_MAP` (vérifié côté serveur)
 
 ---
 

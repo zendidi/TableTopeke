@@ -1,5 +1,6 @@
 import { network } from "../network/ColyseusClient";
 import type { Token } from "../../../server/src/schema/DungeonState";
+import { GMPanel } from "../ui/GMPanel";
 
 // Taille d'une case en pixels — correspond aux tuiles 16×16 du tileset 0x72 Dungeon
 // (équivalent du Grid Cell Size dans Unity)
@@ -9,6 +10,9 @@ const TILE_SIZE = 16;
 // (équivalent de Camera.orthographicSize Unity)
 const INITIAL_ZOOM = 2.5;
 
+// Map par défaut utilisée si l'index est vide ou l'état Colyseus non initialisé
+const DEFAULT_MAP_NAME = "grande-salle";
+
 // DungeonScene — scène de jeu principale
 // Équivalent d'une GameScene Unity avec GameObjects synchronisés via Colyseus
 export class DungeonScene extends Phaser.Scene {
@@ -16,6 +20,16 @@ export class DungeonScene extends Phaser.Scene {
   // Map des containers de tokens : tokenId → Container Phaser
   // Équivalent d'un Dictionary<string, GameObject> Unity
   private tokenSprites: Map<string, Phaser.GameObjects.Container> = new Map();
+
+  // Container Phaser regroupant tous les tokens — assure qu'ils restent au-dessus des layers carte
+  private tokenContainer!: Phaser.GameObjects.Container;
+
+  // Layers de la carte courante (conservés pour pouvoir les détruire lors d'un changement)
+  private currentMapLayers: Phaser.Tilemaps.TilemapLayer[] = [];
+  private currentTilemap: Phaser.Tilemaps.Tilemap | null = null;
+
+  // Panneau GM (HTML overlay) — null si le joueur n'est pas GM
+  private gmPanel: GMPanel | null = null;
 
   // État du scroll caméra via clic droit
   private isDragging: boolean = false;
@@ -31,46 +45,108 @@ export class DungeonScene extends Phaser.Scene {
   // ── Chargement des assets ────────────────────────────────────────────────
   // Équivalent d'un AssetDatabase Unity — chargé avant le create()
   preload(): void {
-    this.load.image("0x72_dungeon", "tilesets/0x72_dungeon.png");
-    this.load.tilemapTiledJSON("grande-salle", "maps/grande-salle.json");
+    // Le tileset est toujours requis — ne pas recharger s'il est déjà en cache
+    if (!this.textures.exists("0x72_dungeon")) {
+      this.load.image("0x72_dungeon", "tilesets/0x72_dungeon.png");
+    }
+
+    // Pré-charger toutes les maps listées dans l'index (chargé par BootScene)
+    const mapsIndex = this.cache.json.get("maps-index");
+    const maps: Array<{ id: string }> = mapsIndex?.maps ?? [{ id: DEFAULT_MAP_NAME }];
+
+    maps.forEach((m) => {
+      // Ne pas recharger si déjà présent (évite les erreurs Phaser de double chargement)
+      if (!this.cache.tilemap.exists(m.id)) {
+        this.load.tilemapTiledJSON(m.id, `maps/${m.id}.json`);
+      }
+    });
   }
 
   create(): void {
-    // ── Carte Tiled ──────────────────────────────────────────────────────────
-    // Équivalent d'un Tilemap Unity chargé depuis un fichier .asset
-    const map     = this.make.tilemap({ key: "grande-salle" });
-    const tileset = map.addTilesetImage("0x72_dungeon", "0x72_dungeon");
+    // ── Container de tokens ──────────────────────────────────────────────────
+    // Créé en premier pour que les layers carte soient insérés en dessous
+    this.tokenContainer = this.add.container(0, 0);
+    this.tokenContainer.setDepth(10);
 
-    if (!tileset) {
-      console.error("Impossible de charger le tileset 0x72_dungeon. Vérifiez client/public/tilesets/0x72_dungeon.png.");
-      return;
-    }
-
-    // Layers dans l'ordre (sol en dessous, murs au-dessus)
-    // Équivalent des Sorting Layers Unity
-    map.createLayer("sol",  tileset, 0, 0);
-    const murLayer = map.createLayer("murs", tileset, 0, 0);
-
-    if (!murLayer) {
-      console.error("Layer 'murs' introuvable dans la map chargée. Vérifiez que le layer est bien nommé 'murs' dans Tiled.");
-      return;
-    }
-
-    // Collisions sur le layer murs — toutes les tuiles sauf les cases vides (-1)
-    // Équivalent d'un TilemapCollider2D Unity
-    murLayer.setCollisionByExclusion([-1]);
-
-    // ── Caméra ──────────────────────────────────────────────────────────────
-    // Borner la caméra aux dimensions réelles de la map — équivalent Cinemachine Confiner
-    this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
-    // Zoom initial pour que les tuiles 16px soient lisibles
+    // ── Zoom initial ─────────────────────────────────────────────────────────
     this.cameras.main.setZoom(INITIAL_ZOOM);
+
+    // ── Charger la map initiale depuis l'état Colyseus ───────────────────────
+    const initialMap = network.room.state.currentMap ?? DEFAULT_MAP_NAME;
+    this._loadMap(initialMap);
+
+    // ── Écouter les changements de map (delta Colyseus) ──────────────────────
+    network.room.state.listen("currentMap", (newMap: string) => {
+      console.log(`[MAP] Changement de map → ${newMap}`);
+      this._loadMap(newMap);
+      this.gmPanel?.updateCurrentMap(newMap);
+    });
 
     // ── Synchronisation des tokens Colyseus ─────────────────────────────────
     this._syncTokens();
 
+    // ── Panneau GM (overlay HTML) — uniquement si l'utilisateur est GM ───────
+    if (network.isGM) {
+      const mapsIndex = this.cache.json.get("maps-index");
+      const mapsData: Array<{ id: string; label?: string }> = mapsIndex?.maps ?? [];
+
+      this.gmPanel = new GMPanel(
+        mapsData,
+        network.room.state.currentMap,
+        (mapName) => network.loadMap(mapName),
+        (fog, los) => network.toggleFog(fog, los),
+        (action) => network.combat(action),
+        (scale) => network.setTileScale(scale),
+      );
+    }
+
     // ── Gestion des inputs ──────────────────────────────────────────────────
     this._setupInput();
+  }
+
+  // ── Chargement / rechargement dynamique d'une map ───────────────────────
+  // Équivalent d'un SceneManager.LoadScene Unity avec transition
+  private _loadMap(mapName: string): void {
+    // Nettoyer l'ancienne carte
+    this.currentMapLayers.forEach((layer) => layer.destroy());
+    this.currentMapLayers = [];
+    this.currentTilemap?.destroy();
+    this.currentTilemap = null;
+
+    // Créer la nouvelle tilemap depuis le cache Phaser
+    const map = this.make.tilemap({ key: mapName });
+    this.currentTilemap = map;
+
+    const tileset = map.addTilesetImage("0x72_dungeon", "0x72_dungeon");
+    if (!tileset) {
+      console.error(`[MAP] Tileset introuvable pour la map "${mapName}". Vérifiez client/public/tilesets/0x72_dungeon.png.`);
+      return;
+    }
+
+    // Créer les layers (sol d'abord, murs au-dessus)
+    // Équivalent des Sorting Layers Unity
+    const solLayer = map.createLayer("sol", tileset, 0, 0);
+    const murLayer = map.createLayer("murs", tileset, 0, 0);
+
+    if (solLayer) {
+      this.currentMapLayers.push(solLayer);
+    }
+
+    if (murLayer) {
+      // Collisions sur le layer murs — toutes les tuiles sauf les cases vides (-1)
+      // Équivalent d'un TilemapCollider2D Unity
+      murLayer.setCollisionByExclusion([-1]);
+      this.currentMapLayers.push(murLayer);
+    } else {
+      console.warn(`[MAP] Layer "murs" introuvable dans la map "${mapName}".`);
+    }
+
+    // S'assurer que le container de tokens reste au-dessus des layers
+    this.tokenContainer.setDepth(10);
+
+    // ── Caméra ──────────────────────────────────────────────────────────────
+    // Borner la caméra aux dimensions réelles de la map — équivalent Cinemachine Confiner
+    this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
   }
 
   // ── Synchronisation Colyseus → Phaser ───────────────────────────────────
@@ -132,8 +208,10 @@ export class DungeonScene extends Phaser.Scene {
       strokeThickness: 3,
     }).setOrigin(0.5, 0);
 
+    // Regrouper les éléments dans un container et l'ajouter au tokenContainer
+    // Le tokenContainer a setDepth(10) — les tokens restent toujours au-dessus des layers carte
     const container = this.add.container(x, y, [circle, nameLabel, hpLabel]);
-    container.setDepth(1);
+    this.tokenContainer.add(container);
 
     this.tokenSprites.set(tokenId, container);
   }
