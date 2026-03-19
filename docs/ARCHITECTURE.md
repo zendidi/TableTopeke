@@ -49,25 +49,26 @@ TableTopeke/
 ├── client/                      # Frontend Phaser 3 (TypeScript + Vite)
 │   ├── src/
 │   │   ├── scenes/
-│   │   │   ├── GameScene.ts     # Scène principale (carte, tokens, caméra)
+│   │   │   ├── DungeonScene.ts  # Scène principale (carte Tiled, tokens, caméra)
 │   │   │   └── UIScene.ts       # Scène UI (HUD, panneau GM, initiative)
 │   │   ├── network/
 │   │   │   └── ColyseusClient.ts # Connexion et gestion des messages
 │   │   ├── objects/
 │   │   │   └── TokenSprite.ts   # Classe sprite de token avec interpolation
 │   │   └── main.ts              # Point d'entrée Phaser
-│   ├── assets/
-│   │   ├── maps/                # Cartes exportées depuis Tiled (JSON)
-│   │   └── tilesets/            # Tilesets graphiques (LPC Dungeon)
-│   ├── index.html
-│   ├── package.json
-│   └── vite.config.ts
+│   └── public/
+│       ├── maps/                # Cartes exportées depuis Tiled (JSON)
+│       │   ├── index.json       # Index des maps disponibles (sélecteur GM)
+│       │   └── grande-salle.json # Map de test Phase 1a (40×40 cases)
+│       └── tilesets/            # Tilesets graphiques
+│           └── 0x72_dungeon.png # Tileset 0x72 Dungeon (16×16 px par tuile)
 │
 ├── docs/                        # Documentation (ce répertoire)
 │   ├── ROADMAP.md
 │   ├── ARCHITECTURE.md
 │   ├── INSTALL.md
-│   └── GAMEPLAY.md
+│   ├── GAMEPLAY.md
+│   └── TILED_GUIDE.md           # Guide créateur de maps Tiled
 │
 ├── start.bat                    # Lancement Windows (Option A)
 ├── start.sh                     # Lancement Mac/Linux (Option A)
@@ -201,6 +202,84 @@ Render.com / Railway.app
 ```
 
 > Le code source ne change pas entre les options A, B et C. Seule la façon de démarrer le serveur diffère.
+
+---
+
+## Gestion des maps
+
+### Flux de création et chargement
+
+```
+Tiled Map Editor (externe)
+  │
+  ├─ Créer la map (layers: sol, murs, tokens)
+  ├─ Référencer le tileset 0x72_dungeon
+  ├─ Exporter en JSON → client/public/maps/nom-de-la-map.json
+  │
+  └─ Ajouter l'entrée dans maps/index.json
+        │
+        ▼
+  Phaser (DungeonScene.ts)
+  │
+  ├─ preload() → load.tilemapTiledJSON("clé", "maps/nom.json")
+  ├─ create()  → make.tilemap({ key: "clé" })
+  │              addTilesetImage("0x72_dungeon", "0x72_dungeon")
+  │              createLayer("sol",  tileset, 0, 0)
+  │              createLayer("murs", tileset, 0, 0)
+  │              murLayer.setCollisionByExclusion([-1])
+  │
+  └─ Tokens Phaser placés sur le layer "tokens" (coordonnées tileX/tileY × TILE_SIZE)
+```
+
+### Layers obligatoires
+
+| Nom du layer | Type        | Rôle |
+|-------------|-------------|------|
+| `sol`       | Tile Layer  | Sol en pierre — rendu en dessous de tout (depth 0) |
+| `murs`      | Tile Layer  | Murs et obstacles — collisions activées (`setCollisionByExclusion`) |
+| `tokens`    | Tile Layer  | Réservé au placement des tokens Phaser — laisser vide dans Tiled |
+
+> **Respecter la casse** : Phaser recherche les layers par nom exact.
+
+### Rôle de `maps/index.json`
+
+`client/public/maps/index.json` est l'inventaire des maps disponibles dans la session.
+
+```json
+{
+  "maps": [
+    { "id": "grande-salle", "label": "Grande Salle", "description": "..." }
+  ],
+  "defaultMap": "grande-salle"
+}
+```
+
+- `id` correspond au nom du fichier JSON sans extension
+- Ce fichier sera lu par le sélecteur de map GM (Phase 1b)
+- Ajouter une entrée ici pour chaque nouvelle map créée dans Tiled
+
+### Message `LOAD_MAP` (Phase 1b)
+
+À venir en Phase 1b — permettra au GM de changer de map en cours de session :
+
+```
+GM (navigateur)           Serveur (Colyseus)        Joueurs (navigateurs)
+  │                              │                         │
+  ├─ LOAD_MAP { mapName } ──────▶│                         │
+  │                              ├─ Validation droits GM   │
+  │                              ├─ state.currentMap = ... │
+  │                              ├─ Delta broadcast ──────▶│
+  │                              │                   ┌─────┤
+  │                              │                   │ DungeonScene
+  │                              │                   │ charge la nouvelle map
+  │                              │                   │ repositionne les tokens
+  │                              │                   └─────▶ Map affichée
+```
+
+Impact sur l'état Colyseus :
+- `DungeonState.currentMap: string` — nom de la map active
+- Les tokens sont repositionnés au centre de la nouvelle map
+- Le Fog of War est réinitialisé
 
 ---
 

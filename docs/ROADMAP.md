@@ -15,9 +15,10 @@
 
 | Phase | Description | Statut |
 |-------|-------------|--------|
-| **0** | Setup & Scaffold | 🔄 En cours |
-| **1** | Serveur Colyseus — état & rôles | ⬜ À faire |
-| **2** | Frontend Phaser 3 — carte & tokens | ⬜ À faire |
+| **0** | Setup & Scaffold | ✅ Terminé |
+| **1a** | Tileset 0x72 + rendu carte Tiled + map de test | ✅ Terminé |
+| **1b** | Sélecteur de map GM + sync Colyseus `LOAD_MAP` | ⬜ À faire |
+| **2** | Serveur Colyseus — état & rôles avancés | ⬜ À faire |
 | **3** | Combat & Distances | ⬜ À faire |
 | **4** | Fog of War (Ligne de vue réelle) | ⬜ À faire |
 | **5** | Personnalisation joueurs | ⬜ À faire |
@@ -26,19 +27,18 @@
 
 ---
 
-## Phase 0 — Setup & Scaffold 🔄 En cours
+## Phase 0 — Setup & Scaffold ✅ Terminé
 
 ### Tâches
 
-- [ ] Installer Node.js LTS (18 ou 20)
-- [ ] Installer Colyseus CLI (`npm install -g create-colyseus-app`)
-- [ ] Scaffold du projet (`npm create colyseus-app`)
-- [ ] Configurer TypeScript (`tsconfig.json`)
-- [ ] Configurer Vite pour le client
-- [ ] Structure des dossiers `server/` et `client/`
-- [ ] Hello World synchronisé : 2 onglets, un point qui bouge
-- [ ] Télécharger le tileset LPC Dungeon (OpenGameArt)
-- [ ] Commit initial du scaffold
+- [x] Installer Node.js LTS (18 ou 20)
+- [x] Installer Colyseus CLI (`npm install -g create-colyseus-app`)
+- [x] Scaffold du projet (`npm create colyseus-app`)
+- [x] Configurer TypeScript (`tsconfig.json`)
+- [x] Configurer Vite pour le client
+- [x] Structure des dossiers `server/` et `client/`
+- [x] Hello World synchronisé : 2 onglets, un point qui bouge
+- [x] Commit initial du scaffold
 
 ### ✅ Critères de validation (Definition of Done)
 
@@ -49,7 +49,60 @@
 
 ---
 
-## Phase 1 — Serveur Colyseus ⬜ À faire
+## Phase 1a — Tileset 0x72 + Rendu Tiled + Map de test ✅ Terminé
+
+### Tâches
+
+- [x] Intégration tileset 0x72 Dungeon (`client/public/tilesets/0x72_dungeon.png`)
+- [x] Refactorisation de `DungeonScene.ts` — remplacement grille placeholder par carte Tiled
+- [x] Chargement Tiled JSON : `preload()` + `create()` avec layers `sol` / `murs` / `tokens`
+- [x] Collisions sur le layer `murs` (`setCollisionByExclusion`)
+- [x] Caméra bornée aux dimensions réelles de la map
+- [x] Zoom initial 2.5× pour tuiles 16px
+- [x] Map de test `client/public/maps/grande-salle.json` (40×40 cases, salle ouverte)
+- [x] Architecture `client/public/maps/` + index des maps `maps/index.json`
+- [x] Guide créateur de maps `docs/TILED_GUIDE.md`
+
+### Architecture maps retenue
+
+- Maps créées en amont dans **Tiled Map Editor** (outil externe, gratuit)
+- Format : **JSON export Tiled**, placé dans `client/public/maps/`
+- Distribution : `git push` ou envoi direct du `.json` aux joueurs
+- Index : `maps/index.json` liste les maps disponibles (id, label, description)
+- Chargement en session : message `LOAD_MAP` GM → sync temps réel (Phase 1b)
+
+### ✅ Critères de validation (Definition of Done)
+
+- `npm start` dans `server/` démarre sans erreur TypeScript
+- `npm run dev` dans `client/` démarre Vite sans erreur
+- La map `grande-salle.json` est un JSON Tiled valide (structure `layers`, `tilesets`, `width`, `height`)
+- La carte s'affiche (ou le placeholder) sans erreur console
+- Les tokens apparaissent et se déplacent (synchronisation Colyseus intacte)
+- La caméra est bornée aux dimensions réelles de la map
+- `maps/index.json` contient `grande-salle` correctement formaté
+- `docs/TILED_GUIDE.md` existe et est complet
+
+---
+
+## Phase 1b — Sélecteur de map GM ⬜ À faire
+
+### Tâches
+
+- [ ] Sélecteur de map GM (liste depuis `maps/index.json`)
+- [ ] Message Colyseus `LOAD_MAP { mapName: string }` — GM uniquement
+- [ ] Sync tous les clients au changement de map
+- [ ] Chargement dynamique du JSON Tiled côté Phaser
+- [ ] Repositionnement des tokens au centre de la nouvelle map
+
+### ✅ Critères de validation
+
+- Le GM peut changer de map en cours de session
+- Tous les clients voient la nouvelle map en < 500ms
+- Les tokens sont repositionnés sur la nouvelle map
+
+---
+
+## Phase 2 — Serveur Colyseus ⬜ À faire
 
 ### Schéma d'état
 
@@ -240,3 +293,17 @@
 | **Hébergement** | Local Option A | PC du GM, zéro frais, zéro latence, `start.bat` double-clic. Extensible vers B (exe) ou C (cloud) |
 | **Fog of War** | Raycasting LOS | Demandé explicitement, plus immersif, compatible grille Tiled |
 | **Language** | TypeScript | Typage fort (proche C#), meilleure DX, compatible Colyseus & Phaser |
+
+---
+
+## 🗺️ Décisions d'architecture — Maps
+
+| Aspect | Choix retenu |
+|--------|-------------|
+| **Création** | Maps créées en amont dans **Tiled Map Editor** (outil externe, gratuit) |
+| **Format** | JSON export Tiled, placé dans `client/public/maps/` |
+| **Distribution** | `git push` ou envoi direct du `.json` aux joueurs |
+| **Index** | `maps/index.json` liste les maps disponibles (id, label, description) |
+| **Layers obligatoires** | `sol` (fond), `murs` (collisions), `tokens` (réservé Phaser) |
+| **Tileset** | 0x72 Dungeon Tileset II — tuiles 16×16 px |
+| **Chargement en session** | Message `LOAD_MAP { mapName }` GM → sync Colyseus temps réel (Phase 1b) |
