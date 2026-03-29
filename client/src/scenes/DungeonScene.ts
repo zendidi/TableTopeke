@@ -1,6 +1,7 @@
 import { network } from "../network/ColyseusClient";
 import type { Token } from "../../../server/src/schema/DungeonState";
 import { GMPanel } from "../ui/GMPanel";
+import type { ImageMapData, MapIndex, MapIndexEntry } from "../types/MapTypes";
 
 // Taille d'une case en pixels — correspond aux tuiles 16×16 du tileset 0x72 Dungeon
 // (équivalent du Grid Cell Size dans Unity)
@@ -28,6 +29,10 @@ export class DungeonScene extends Phaser.Scene {
   private currentMapLayers: Phaser.Tilemaps.TilemapLayer[] = [];
   private currentTilemap: Phaser.Tilemaps.Tilemap | null = null;
 
+  // Sprites des images placées pour les image-maps (détruits lors d'un changement de map)
+  private currentImageSprites: Phaser.GameObjects.Image[] = [];
+  private currentImageGrid: Phaser.GameObjects.Graphics | null = null;
+
   // Panneau GM (HTML overlay) — null si le joueur n'est pas GM
   private gmPanel: GMPanel | null = null;
 
@@ -42,7 +47,7 @@ export class DungeonScene extends Phaser.Scene {
     super({ key: "DungeonScene" });
   }
 
-  // ── Chargement des assets ────────────────────────────────────────────────
+  // ── Chargement des assets ────────────────────────────────────────��───────
   // Équivalent d'un AssetDatabase Unity — chargé avant le create()
   preload(): void {
     // Le tileset est toujours requis — ne pas recharger s'il est déjà en cache
@@ -50,11 +55,16 @@ export class DungeonScene extends Phaser.Scene {
       this.load.image("0x72_dungeon", "tilesets/0x72_dungeon.png");
     }
 
-    // Pré-charger toutes les maps listées dans l'index (chargé par BootScene)
-    const mapsIndex = this.cache.json.get("maps-index");
-    const maps: Array<{ id: string }> = mapsIndex?.maps ?? [{ id: DEFAULT_MAP_NAME }];
+    // Pré-charger uniquement les maps Tiled listées dans l'index (chargé par BootScene)
+    // Les image-maps (type: "image-map") sont chargées dynamiquement via fetch dans _loadImageMap()
+    // et ne doivent PAS être parsées comme Tiled JSON — cela générerait des erreurs en console
+    const mapsIndex = this.cache.json.get("maps-index") as MapIndex | null;
+    const maps: MapIndexEntry[] = mapsIndex?.maps ?? [{ id: DEFAULT_MAP_NAME }];
 
     maps.forEach((m) => {
+      // Ignorer les image-maps — elles utilisent fetch + Phaser.load.image() dynamiquement
+      if ((m.type ?? "tiled") === "image-map") return;
+
       // Ne pas recharger si déjà présent (évite les erreurs Phaser de double chargement)
       if (!this.cache.tilemap.exists(m.id)) {
         this.load.tilemapTiledJSON(m.id, `maps/${m.id}.json`);
@@ -105,14 +115,34 @@ export class DungeonScene extends Phaser.Scene {
   }
 
   // ── Chargement / rechargement dynamique d'une map ───────────────────────
-  // Équivalent d'un SceneManager.LoadScene Unity avec transition
+  // Supporte les formats "tiled" et "image-map" (Phase 1c)
   private _loadMap(mapName: string): void {
-    // Nettoyer l'ancienne carte
+    // Nettoyer l'ancienne carte Tiled
     this.currentMapLayers.forEach((layer) => layer.destroy());
     this.currentMapLayers = [];
     this.currentTilemap?.destroy();
     this.currentTilemap = null;
 
+    // Nettoyer les images d'une image-map précédente
+    this.currentImageSprites.forEach((s) => s.destroy());
+    this.currentImageSprites = [];
+    this.currentImageGrid?.destroy();
+    this.currentImageGrid = null;
+
+    // Déterminer le type de map depuis maps/index.json
+    const mapsIndex = this.cache.json.get("maps-index") as MapIndex | null;
+    const entry     = mapsIndex?.maps.find((m) => m.id === mapName);
+    const mapType   = entry?.type ?? "tiled";
+
+    if (mapType === "image-map") {
+      void this._loadImageMap(mapName);
+    } else {
+      this._loadTiledMap(mapName);
+    }
+  }
+
+  // ── Chargement d'une map Tiled ───────────────────────────────────────────
+  private _loadTiledMap(mapName: string): void {
     // Créer la nouvelle tilemap depuis le cache Phaser
     const map = this.make.tilemap({ key: mapName });
     this.currentTilemap = map;
@@ -124,7 +154,6 @@ export class DungeonScene extends Phaser.Scene {
     }
 
     // Créer les layers (sol d'abord, murs au-dessus)
-    // Équivalent des Sorting Layers Unity
     const solLayer = map.createLayer("sol", tileset, 0, 0);
     const murLayer = map.createLayer("murs", tileset, 0, 0);
 
@@ -133,8 +162,6 @@ export class DungeonScene extends Phaser.Scene {
     }
 
     if (murLayer) {
-      // Collisions sur le layer murs — toutes les tuiles sauf les cases vides (-1)
-      // Équivalent d'un TilemapCollider2D Unity
       murLayer.setCollisionByExclusion([-1]);
       this.currentMapLayers.push(murLayer);
     } else {
@@ -144,9 +171,80 @@ export class DungeonScene extends Phaser.Scene {
     // S'assurer que le container de tokens reste au-dessus des layers
     this.tokenContainer.setDepth(10);
 
-    // ── Caméra ──────────────────────────────────────────────────────────────
-    // Borner la caméra aux dimensions réelles de la map — équivalent Cinemachine Confiner
     this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
+  }
+
+  // ── Chargement d'une image-map (format Phase 1c) ─────────────────────────
+  private async _loadImageMap(mapName: string): Promise<void> {
+    try {
+      const response = await fetch(`maps/${mapName}.json`);
+      if (!response.ok) {
+        console.error(`[MAP] Impossible de charger l'image-map "${mapName}" (HTTP ${response.status}).`);
+        return;
+      }
+      const data = await response.json() as ImageMapData;
+
+      if (data.type !== "image-map") {
+        console.error(`[MAP] Le fichier "${mapName}.json" n'est pas une image-map valide.`);
+        return;
+      }
+
+      const tileSize  = data.tileSize ?? 64;
+      const mapWidth  = data.widthInTiles  * tileSize;
+      const mapHeight = data.heightInTiles * tileSize;
+
+      // Charger et placer chaque image
+      for (const placed of data.images) {
+        const textureKey = `imgmap_${placed.src}`;
+
+        await new Promise<void>((resolve) => {
+          const doCreate = () => {
+            const sprite = this.add.image(
+              placed.x * tileSize,
+              placed.y * tileSize,
+              textureKey,
+            ).setOrigin(0, 0);
+            sprite.setDisplaySize(placed.widthInTiles * tileSize, placed.heightInTiles * tileSize);
+            sprite.setDepth(0);
+            this.currentImageSprites.push(sprite);
+            resolve();
+          };
+
+          if (this.textures.exists(textureKey)) {
+            doCreate();
+          } else {
+            this.load.image(textureKey, placed.src);
+            this.load.once("complete", doCreate);
+            this.load.start();
+          }
+        });
+      }
+
+      // Dessiner une grille légère par-dessus les images
+      const grid = this.add.graphics();
+      this.currentImageGrid = grid;
+      grid.lineStyle(1, 0x444466, 0.3);
+      for (let x = 0; x <= data.widthInTiles; x++) {
+        grid.moveTo(x * tileSize, 0);
+        grid.lineTo(x * tileSize, mapHeight);
+      }
+      for (let y = 0; y <= data.heightInTiles; y++) {
+        grid.moveTo(0,        y * tileSize);
+        grid.lineTo(mapWidth, y * tileSize);
+      }
+      grid.strokePath();
+      grid.setDepth(1);
+
+      // Les tokens doivent rester au-dessus
+      this.tokenContainer.setDepth(10);
+
+      // Bornes caméra
+      this.cameras.main.setBounds(0, 0, mapWidth, mapHeight);
+
+      console.log(`[MAP] Image-map "${mapName}" chargée (${data.images.length} images, ${data.widthInTiles}×${data.heightInTiles} cases).`);
+    } catch (err) {
+      console.error(`[MAP] Erreur lors du chargement de l'image-map "${mapName}" :`, err);
+    }
   }
 
   // ── Synchronisation Colyseus → Phaser ───────────────────────────────────
