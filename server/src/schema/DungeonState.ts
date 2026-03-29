@@ -12,6 +12,8 @@ export class Token extends Schema {
   @type("number")  hp: number = 20;
   @type("number")  hpMax: number = 20;
   @type("boolean") isGM: boolean = false;
+  // Visibilité du token (masqué par le Fog of War si false)
+  @type("boolean") isVisible: boolean = true;
 }
 
 // Représente un joueur connecté à la session
@@ -34,7 +36,7 @@ export class DungeonState extends Schema {
 
   // Gestion du combat au tour par tour
   @type("string")  currentTurnId: string = "";
-  @type("number")  round: number = 0;
+  @type("number")  currentTurn: number = 0;
   @type("boolean") combatActive: boolean = false;
 
   // Identifiant de session du GM

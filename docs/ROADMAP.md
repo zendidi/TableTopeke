@@ -19,7 +19,7 @@
 | **1a** | Tileset 0x72 + rendu carte Tiled + map de test | ✅ Terminé |
 | **1b** | Sélecteur de map GM + sync Colyseus `LOAD_MAP` | ✅ Terminé |
 | **1c** | Éditeur de map par images drag & drop (GM only) | ✅ Terminé |
-| **2** | Serveur Colyseus — état & rôles avancés | ⬜ À faire |
+| **2** | Serveur Colyseus — état & rôles avancés | ✅ Terminé |
 | **3** | Combat & Distances | ⬜ À faire |
 | **4** | Fog of War (Ligne de vue réelle) | ⬜ À faire |
 | **5** | Personnalisation joueurs | ⬜ À faire |
@@ -143,26 +143,26 @@
 
 ---
 
-## Phase 2 — Serveur Colyseus ⬜ À faire
+## Phase 2 — Serveur Colyseus ✅ Terminé
 
 ### Schéma d'état
 
-- [ ] `DungeonState` (état global de la room)
-- [ ] `Token` (position, HP, owner, isVisible)
-- [ ] `Player` (sessionId, name, color, isGM)
+- [x] `DungeonState` (état global de la room)
+- [x] `Token` (position, HP, owner, isVisible)
+- [x] `Player` (sessionId, name, color, isGM)
 
 ### Système de rôles
 
-- [ ] Authentification GM par mot de passe (`onAuth`)
-- [ ] Séparation des droits : GM (tous droits) vs Joueur (son token uniquement)
-- [ ] Gestion de la déconnexion / reconnexion
+- [x] Authentification GM par mot de passe (`onAuth`)
+- [x] Séparation des droits : GM (tous droits) vs Joueur (son token uniquement)
+- [x] Gestion de la déconnexion / reconnexion
 
 ### Messages
 
-- [ ] `MOVE_TOKEN` — déplacer un token (joueur son token, GM tous)
-- [ ] `UPDATE_HP` — modifier les HP d'un token (GM uniquement)
-- [ ] `TOGGLE_FOG` — activer/désactiver le Fog of War (GM uniquement)
-- [ ] `COMBAT_ACTION` — actions de combat (initiative, fin de tour)
+- [x] `MOVE_TOKEN` — déplacer un token (joueur son token, GM tous)
+- [x] `UPDATE_HP` — modifier les HP d'un token (GM uniquement)
+- [x] `TOGGLE_FOG` — activer/désactiver le Fog of War (GM uniquement)
+- [x] `COMBAT_ACTION` — actions de combat (start, end, next)
 
 ### ✅ Critères de validation
 

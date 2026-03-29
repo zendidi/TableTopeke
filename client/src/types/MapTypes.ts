@@ -24,7 +24,7 @@ export interface ImageMapData {
 /** Entrée de maps/index.json */
 export interface MapIndexEntry {
   id: string;
-  label: string;
+  label?: string;
   description?: string;
   type?: "tiled" | "image-map"; // défaut "tiled" si absent (rétrocompatibilité)
 }

@@ -11,6 +11,43 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/lang/fr/).
 
 ---
 
+## [0.5.0] — Phase 2 : Serveur Colyseus — état & rôles avancés
+
+### Ajouté
+- `server/src/schema/DungeonState.ts` :
+  - `Token.isVisible: boolean` — visibilité du token (Fog of War Phase 4)
+  - `DungeonState.currentTurn: number` — numéro du tour courant (renommé depuis `round`)
+- `server/src/rooms/DungeonRoom.ts` :
+  - `onAuth(client, options)` — authentification GM par mot de passe avant `onJoin` (mot de passe hardcodé `"admin"`, TODO Phase 5)
+  - `allowReconnection(client, 30)` dans `onLeave` — restauration du joueur/token si reconnexion dans les 30s
+- `client/src/network/ColyseusClient.ts` :
+  - `network.players` — getter vers `room.state.players` (MapSchema synchronisée)
+  - Support de `window.__playerConfig` comme source de configuration joueur alternative
+- `client/src/ui/GMPanel.ts` :
+  - Section "👥 Joueurs connectés" — liste dynamique des joueurs avec nom, couleur et HP
+  - Boutons `+` / `−` HP par token (appelle `network.updateHp`)
+  - Méthode `updatePlayers()` — rafraîchit la liste lors des arrivées/départs
+- `client/src/main.ts` :
+  - Déclaration `window.__playerConfig` dans l'interface `Window`
+
+### Modifié
+- `server/src/rooms/DungeonRoom.ts` :
+  - Message `COMBAT` renommé → `COMBAT_ACTION`
+  - Action `"nextTurn"` renommée → `"next"`
+  - Token spawn initial fixé à la case (20, 20) au lieu d'une position dynamique
+  - `onLeave` : supprime le joueur et son token de la map après expiration de reconnexion
+- `client/src/network/ColyseusClient.ts` :
+  - `network.combat()` : envoi `"COMBAT_ACTION"` (au lieu de `"COMBAT"`)
+  - Type de l'action combat : `"next"` (au lieu de `"nextTurn"`)
+- `client/src/ui/GMPanel.ts` :
+  - Bouton "Tour suivant" : appelle `onCombat("next")` (au lieu de `"nextTurn"`)
+- `client/src/types/MapTypes.ts` :
+  - `MapIndexEntry.label` rendu optionnel (rétrocompatibilité fallback)
+- `docs/ROADMAP.md` : Phase 2 ✅ Terminé
+- `docs/ARCHITECTURE.md` : section "Schéma d'état" mise à jour (Player, Token.isVisible, DungeonState.currentTurn, etc.)
+
+---
+
 ## [0.4.0] — Phase 1c : Éditeur de map par images (GM only)
 
 ### Ajouté

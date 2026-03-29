@@ -1,7 +1,8 @@
 import * as Colyseus from "colyseus.js";
-import { DungeonState } from "../../../server/src/schema/DungeonState";
+import { DungeonState, Player } from "../../../server/src/schema/DungeonState";
+import type { MapSchema } from "@colyseus/schema";
 
-// Type pour les options de connexion (issues de player-config.json)
+// Type pour les options de connexion (issues de player-config.json ou window.__playerConfig)
 interface ConnectOptions {
   name?: string;
   color?: string;
@@ -31,7 +32,12 @@ class NetworkManager {
   }
 
   // Connexion au serveur et join/create de la room "dungeon"
+  // Les options peuvent venir de player-config.json (via Phaser cache) ou de window.__playerConfig
   async connect(options: ConnectOptions): Promise<void> {
+    // Fusionner avec window.__playerConfig si disponible (priorité aux options passées)
+    const configOverride = window.__playerConfig ?? {};
+    const mergedOptions: ConnectOptions = { ...configOverride, ...options };
+
     // En développement on pointe vers localhost, en production vers le même host que le client
     const isDev    = window.location.hostname === "localhost";
     const hostname = isDev ? "localhost:2567" : window.location.hostname;
@@ -39,10 +45,15 @@ class NetworkManager {
     const endpoint = `${protocol}://${hostname}`;
 
     this.client = new Colyseus.Client(endpoint);
-    this.room   = await this.client.joinOrCreate<DungeonState>("dungeon", options);
-    this.isGM   = options.isGM === true;
+    this.room   = await this.client.joinOrCreate<DungeonState>("dungeon", mergedOptions);
+    this.isGM   = mergedOptions.isGM === true;
 
     console.log(`[NetworkManager] Connecté à ${endpoint} — sessionId: ${this.room.sessionId}`);
+  }
+
+  // Référence vers la MapSchema des joueurs connectés (synchronisée par Colyseus)
+  get players(): MapSchema<Player> {
+    return this.room.state.players;
   }
 
   // Déplace un token vers les coordonnées de tuile indiquées
@@ -62,8 +73,8 @@ class NetworkManager {
   }
 
   // Contrôle le mode combat (GM seulement)
-  combat(action: "start" | "end" | "nextTurn"): void {
-    this.room.send("COMBAT", { action });
+  combat(action: "start" | "end" | "next"): void {
+    this.room.send("COMBAT_ACTION", { action });
   }
 
   // Modifie l'échelle des cases en mètres (GM seulement)

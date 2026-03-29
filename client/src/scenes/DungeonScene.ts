@@ -107,7 +107,18 @@ export class DungeonScene extends Phaser.Scene {
         (fog, los) => network.toggleFog(fog, los),
         (action) => network.combat(action),
         (scale) => network.setTileScale(scale),
+        (tokenId, hp) => network.updateHp(tokenId, hp),
+        network.room.state.players,
+        network.room.state.tokens,
       );
+
+      // Mettre à jour la liste des joueurs lorsqu'un joueur rejoint ou quitte la room
+      network.room.state.players.onAdd((_player, _sessionId) => {
+        this.gmPanel?.updatePlayers();
+      });
+      network.room.state.players.onRemove((_player, _sessionId) => {
+        this.gmPanel?.updatePlayers();
+      });
     }
 
     // ── Gestion des inputs ──────────────────────────────────────────────────

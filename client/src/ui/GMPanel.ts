@@ -2,16 +2,24 @@
 // Positionné en overlay sur le canvas Phaser via position fixed CSS
 // Équivalent du panneau GM Unity (Inspector + custom EditorWindow)
 
+import type { MapSchema } from "@colyseus/schema";
+import type { Player, Token } from "../../../server/src/schema/DungeonState";
+
 export class GMPanel {
   private container: HTMLDivElement;
+  // Référence à la section joueurs pour la mise à jour dynamique
+  private playersSection: HTMLElement | null = null;
 
   constructor(
     private mapsIndex: Array<{ id: string; label?: string }>,
     private currentMap: string,
     private onLoadMap: (mapName: string) => void,
     private onToggleFog: (fog?: boolean, los?: boolean) => void,
-    private onCombat: (action: "start" | "end" | "nextTurn") => void,
+    private onCombat: (action: "start" | "end" | "next") => void,
     private onSetTileScale: (scale: number) => void,
+    private onUpdateHp: (tokenId: string, hp: number) => void,
+    private players: MapSchema<Player>,
+    private tokens: MapSchema<Token>,
   ) {
     this.container = document.createElement("div");
     this.container.id = "gm-panel";
@@ -41,12 +49,19 @@ export class GMPanel {
   // Construit le HTML interne du panneau avec toutes les sections
   private _build(): void {
     this.container.innerHTML = "";
+    this.playersSection = null;
 
     // ── Titre ────────────────────────────────────────────────────────────────
     const titre = document.createElement("h3");
     titre.textContent = "🎲 Panneau Game Master";
     Object.assign(titre.style, { margin: "0 0 12px 0", fontSize: "14px", borderBottom: "1px solid #7b2d8b", paddingBottom: "8px" });
     this.container.appendChild(titre);
+
+    // ── Section Joueurs connectés ────────────────────────────────────────────
+    const playersContent = this._buildPlayersSection();
+    const playersSect    = this._buildSection("👥 Joueurs connectés", playersContent);
+    this.playersSection  = playersContent;
+    this.container.appendChild(playersSect);
 
     // ── Section Maps ─────────────────────────────────────────────────────────
     this.container.appendChild(this._buildSection("🗺️ Map active", this._buildMapSection()));
@@ -72,6 +87,105 @@ export class GMPanel {
     section.appendChild(sectionTitre);
     section.appendChild(content);
     return section;
+  }
+
+  // Section liste dynamique des joueurs avec contrôles HP
+  private _buildPlayersSection(): HTMLElement {
+    const wrapper = document.createElement("div");
+    wrapper.id = "gm-panel-players-list";
+
+    if (this.players.size === 0) {
+      const empty = document.createElement("div");
+      empty.textContent = "Aucun joueur connecté";
+      Object.assign(empty.style, { color: "#888888", fontSize: "11px", fontStyle: "italic" });
+      wrapper.appendChild(empty);
+      return wrapper;
+    }
+
+    this.players.forEach((player: Player, sessionId: string) => {
+      const token = this.tokens.get(sessionId);
+      const row   = this._buildPlayerRow(player, token ?? null);
+      wrapper.appendChild(row);
+    });
+
+    return wrapper;
+  }
+
+  // Crée une ligne de joueur avec son nom, couleur et contrôles HP
+  private _buildPlayerRow(player: Player, token: Token | null): HTMLDivElement {
+    const row = document.createElement("div");
+    Object.assign(row.style, {
+      display:        "flex",
+      alignItems:     "center",
+      gap:            "4px",
+      marginBottom:   "4px",
+      padding:        "3px 4px",
+      background:     "rgba(255,255,255,0.05)",
+      borderRadius:   "3px",
+      flexWrap:       "wrap",
+    });
+
+    // Indicateur de couleur du joueur
+    const colorDot = document.createElement("span");
+    Object.assign(colorDot.style, {
+      display:      "inline-block",
+      width:        "10px",
+      height:       "10px",
+      borderRadius: "50%",
+      background:   player.color ?? "#ffffff",
+      flexShrink:   "0",
+    });
+    row.appendChild(colorDot);
+
+    // Nom du joueur (GM affiché en rouge)
+    const nameSpan = document.createElement("span");
+    nameSpan.textContent = player.isGM ? `${player.name} (GM)` : player.name;
+    Object.assign(nameSpan.style, {
+      flex:      "1",
+      fontSize:  "11px",
+      color:     player.isGM ? "#ff9966" : "#dddddd",
+      overflow:  "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap",
+    });
+    row.appendChild(nameSpan);
+
+    if (token) {
+      // Affichage des HP courants
+      const hpSpan = document.createElement("span");
+      hpSpan.textContent = `${token.hp}/${token.hpMax}`;
+      hpSpan.id = `gm-hp-${token.id}`;
+      Object.assign(hpSpan.style, { fontSize: "11px", color: "#88ff88", minWidth: "40px", textAlign: "center" });
+      row.appendChild(hpSpan);
+
+      // Bouton – HP
+      const btnMinus = document.createElement("button");
+      btnMinus.textContent = "−";
+      Object.assign(btnMinus.style, this._btnStyle("#8b2d2d"));
+      btnMinus.addEventListener("click", () => {
+        // Lire le token courant depuis la MapSchema pour avoir les valeurs à jour
+        const currentToken = this.tokens.get(token.id);
+        if (!currentToken) return;
+        const newHp = Math.max(0, currentToken.hp - 1);
+        this.onUpdateHp(currentToken.id, newHp);
+      });
+      row.appendChild(btnMinus);
+
+      // Bouton + HP
+      const btnPlus = document.createElement("button");
+      btnPlus.textContent = "+";
+      Object.assign(btnPlus.style, this._btnStyle("#2d8b2d"));
+      btnPlus.addEventListener("click", () => {
+        // Lire le token courant depuis la MapSchema pour avoir les valeurs à jour
+        const currentToken = this.tokens.get(token.id);
+        if (!currentToken) return;
+        const newHp = Math.min(currentToken.hpMax, currentToken.hp + 1);
+        this.onUpdateHp(currentToken.id, newHp);
+      });
+      row.appendChild(btnPlus);
+    }
+
+    return row;
   }
 
   // Section sélection de map
@@ -159,7 +273,7 @@ export class GMPanel {
     const btnNext = document.createElement("button");
     btnNext.textContent = "→ Tour suivant";
     Object.assign(btnNext.style, this._btnStyle("#2d5a8b"));
-    btnNext.addEventListener("click", () => this.onCombat("nextTurn"));
+    btnNext.addEventListener("click", () => this.onCombat("next"));
 
     wrapper.appendChild(btnStart);
     wrapper.appendChild(btnEnd);
@@ -266,6 +380,28 @@ export class GMPanel {
     // Synchroniser le sélecteur
     const select = document.getElementById("gm-panel-map-select") as HTMLSelectElement | null;
     if (select) select.value = mapName;
+  }
+
+  // Met à jour la liste des joueurs connectés (appelé lors de onAdd/onRemove Colyseus)
+  updatePlayers(): void {
+    const listEl = document.getElementById("gm-panel-players-list");
+    if (!listEl) return;
+
+    // Vider et reconstruire la liste
+    listEl.innerHTML = "";
+
+    if (this.players.size === 0) {
+      const empty = document.createElement("div");
+      empty.textContent = "Aucun joueur connecté";
+      Object.assign(empty.style, { color: "#888888", fontSize: "11px", fontStyle: "italic" });
+      listEl.appendChild(empty);
+      return;
+    }
+
+    this.players.forEach((player: Player, sessionId: string) => {
+      const token = this.tokens.get(sessionId);
+      listEl.appendChild(this._buildPlayerRow(player, token ?? null));
+    });
   }
 
   // Supprime le panneau du DOM
