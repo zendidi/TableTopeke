@@ -7,8 +7,6 @@ import type { Player, Token } from "../../../server/src/schema/DungeonState";
 
 export class GMPanel {
   private container: HTMLDivElement;
-  // Référence à la section joueurs pour la mise à jour dynamique
-  private playersSection: HTMLElement | null = null;
 
   constructor(
     private mapsIndex: Array<{ id: string; label?: string }>,
@@ -49,7 +47,6 @@ export class GMPanel {
   // Construit le HTML interne du panneau avec toutes les sections
   private _build(): void {
     this.container.innerHTML = "";
-    this.playersSection = null;
 
     // ── Titre ────────────────────────────────────────────────────────────────
     const titre = document.createElement("h3");
@@ -60,7 +57,6 @@ export class GMPanel {
     // ── Section Joueurs connectés ────────────────────────────────────────────
     const playersContent = this._buildPlayersSection();
     const playersSect    = this._buildSection("👥 Joueurs connectés", playersContent);
-    this.playersSection  = playersContent;
     this.container.appendChild(playersSect);
 
     // ── Section Maps ─────────────────────────────────────────────────────────
@@ -157,6 +153,14 @@ export class GMPanel {
       hpSpan.id = `gm-hp-${token.id}`;
       Object.assign(hpSpan.style, { fontSize: "11px", color: "#88ff88", minWidth: "40px", textAlign: "center" });
       row.appendChild(hpSpan);
+
+      // Écouter les changements de HP en temps réel depuis Colyseus
+      const liveToken = this.tokens.get(token.id);
+      if (liveToken) {
+        liveToken.listen("hp", (newHp: number) => {
+          hpSpan.textContent = `${newHp}/${liveToken.hpMax}`;
+        });
+      }
 
       // Bouton – HP
       const btnMinus = document.createElement("button");

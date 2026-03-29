@@ -1,9 +1,9 @@
 import { Room, Client } from "colyseus";
 import { DungeonState, Player, Token } from "../schema/DungeonState";
 
-// Mot de passe GM par défaut — remplacé par un vrai système en Phase 5
-// TODO (Phase 5) : remplacer "admin" par une authentification sécurisée
-const GM_PASSWORD = "admin";
+// Mot de passe GM — priorité à la variable d'environnement, fallback sur "admin"
+// TODO (Phase 5) : remplacer par une authentification sécurisée
+const GM_PASSWORD = process.env.GM_PASSWORD ?? "admin";
 
 // Position de repositionnement des tokens lors d'un changement de map (centre par défaut)
 const DEFAULT_TOKEN_SPAWN = { x: 20, y: 20 };
@@ -131,7 +131,7 @@ export class DungeonRoom extends Room<DungeonState> {
       console.log(`[MAP] Chargement de la map "${msg.mapName}" par le GM.`);
     });
 
-    console.log(`[DungeonRoom] Salle créée — GM_PASSWORD=${GM_PASSWORD === "admin" ? "(défaut)" : "(custom)"}`);
+    console.log(`[DungeonRoom] Salle créée — GM_PASSWORD=${process.env.GM_PASSWORD ? "(custom)" : "(défaut)"}`);
   }
 
   onJoin(client: Client, options: JoinOptions = {}, auth?: AuthData): void {
@@ -160,9 +160,10 @@ export class DungeonRoom extends Room<DungeonState> {
     token.hpMax     = options.hpMax ?? 20;
     token.isGM      = isGM;
     token.isVisible = true;
-    // Position de spawn initiale — case (20, 20) par défaut
-    token.tileX     = DEFAULT_TOKEN_SPAWN.x;
-    token.tileY     = DEFAULT_TOKEN_SPAWN.y;
+    // Offset de spawn pour éviter la superposition des tokens
+    const spawnIndex = this.state.tokens.size; // avant le set() courant
+    token.tileX = DEFAULT_TOKEN_SPAWN.x + (spawnIndex % 5);
+    token.tileY = DEFAULT_TOKEN_SPAWN.y + Math.floor(spawnIndex / 5);
     this.state.tokens.set(client.sessionId, token);
 
     // ── Enregistrement du GM ────────────────────────────────────────────────
@@ -199,14 +200,14 @@ export class DungeonRoom extends Room<DungeonState> {
       }
     }
 
-    // Supprimer le joueur et son token de la map
-    this.state.players.delete(client.sessionId);
-    this.state.tokens.delete(client.sessionId);
-
-    // Si le GM se déconnecte définitivement, libère le slot GM
+    // Si le GM se déconnecte définitivement, libère le slot GM EN PREMIER
     if (this.state.gmSessionId === client.sessionId) {
       this.state.gmSessionId = "";
       console.log("[DungeonRoom] Le GM s'est déconnecté — slot GM libéré");
     }
+
+    // Supprimer le joueur et son token de la map
+    this.state.players.delete(client.sessionId);
+    this.state.tokens.delete(client.sessionId);
   }
 }
