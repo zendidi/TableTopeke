@@ -1,7 +1,7 @@
 import { network } from "../network/ColyseusClient";
 import type { Token } from "../../../server/src/schema/DungeonState";
 import { GMPanel } from "../ui/GMPanel";
-import type { ImageMapData, MapIndex } from "../types/MapTypes";
+import type { ImageMapData, MapIndex, MapIndexEntry } from "../types/MapTypes";
 
 // Taille d'une case en pixels — correspond aux tuiles 16×16 du tileset 0x72 Dungeon
 // (équivalent du Grid Cell Size dans Unity)
@@ -47,7 +47,7 @@ export class DungeonScene extends Phaser.Scene {
     super({ key: "DungeonScene" });
   }
 
-  // ── Chargement des assets ────────────────────────────────────────────────
+  // ── Chargement des assets ────────────────────────────────────────��───────
   // Équivalent d'un AssetDatabase Unity — chargé avant le create()
   preload(): void {
     // Le tileset est toujours requis — ne pas recharger s'il est déjà en cache
@@ -55,11 +55,16 @@ export class DungeonScene extends Phaser.Scene {
       this.load.image("0x72_dungeon", "tilesets/0x72_dungeon.png");
     }
 
-    // Pré-charger toutes les maps listées dans l'index (chargé par BootScene)
-    const mapsIndex = this.cache.json.get("maps-index");
-    const maps: Array<{ id: string }> = mapsIndex?.maps ?? [{ id: DEFAULT_MAP_NAME }];
+    // Pré-charger uniquement les maps Tiled listées dans l'index (chargé par BootScene)
+    // Les image-maps (type: "image-map") sont chargées dynamiquement via fetch dans _loadImageMap()
+    // et ne doivent PAS être parsées comme Tiled JSON — cela générerait des erreurs en console
+    const mapsIndex = this.cache.json.get("maps-index") as MapIndex | null;
+    const maps: MapIndexEntry[] = mapsIndex?.maps ?? [{ id: DEFAULT_MAP_NAME }];
 
     maps.forEach((m) => {
+      // Ignorer les image-maps — elles utilisent fetch + Phaser.load.image() dynamiquement
+      if ((m.type ?? "tiled") === "image-map") return;
+
       // Ne pas recharger si déjà présent (évite les erreurs Phaser de double chargement)
       if (!this.cache.tilemap.exists(m.id)) {
         this.load.tilemapTiledJSON(m.id, `maps/${m.id}.json`);
