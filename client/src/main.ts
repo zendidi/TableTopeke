@@ -5,9 +5,21 @@ import { DungeonScene }   from "./scenes/DungeonScene";
 import { MapEditorScene } from "./scenes/MapEditorScene";
 
 // Extension globale de Window pour exposer l'instance Phaser aux overlays HTML
+// et la configuration joueur en cas d'intégration externe
 declare global {
   interface Window {
     __phaserGame: Phaser.Game;
+    // Configuration joueur optionnelle — peut être définie par une page hôte
+    // avant le chargement de l'application (priorité sur player-config.json)
+    __playerConfig?: {
+      name?: string;
+      color?: string;
+      avatarUrl?: string;
+      hp?: number;
+      hpMax?: number;
+      isGM?: boolean;
+      gmPassword?: string;
+    };
   }
 }
 

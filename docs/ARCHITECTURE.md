@@ -137,12 +137,11 @@ Colyseus patch cycle :
 ### Game Master
 
 ```typescript
-// Authentification GM à la connexion
+// Authentification GM à la connexion (Phase 2)
+// TODO (Phase 5) : remplacer le mot de passe hardcodé par une vraie auth
 onAuth(client, options) {
-  if (options.isGM && options.gmPassword === process.env.GM_PASSWORD) {
-    return { isGM: true };
-  }
-  return { isGM: false };
+  const isGM = options.gmPassword === "admin";
+  return { isGM };
 }
 ```
 
@@ -155,6 +154,49 @@ onAuth(client, options) {
 | Révéler des zones | ✅ | ❌ |
 | Gérer l'initiative | ✅ | ❌ |
 | Voir toute la carte | ✅ | ❌ (FoW) |
+
+---
+
+## Schéma d'état Colyseus
+
+### `Token`
+
+| Champ | Type | Description |
+|-------|------|-------------|
+| `id` | `string` | Identifiant unique (= sessionId du joueur propriétaire) |
+| `ownerId` | `string` | SessionId du joueur propriétaire du token |
+| `tileX` / `tileY` | `number` | Position en cases sur la grille |
+| `name` | `string` | Nom affiché sur le token |
+| `avatarUrl` | `string` | URL de l'avatar (optionnel) |
+| `color` | `string` | Couleur hexadécimale du token |
+| `hp` / `hpMax` | `number` | Points de vie courants / maximum |
+| `isGM` | `boolean` | Vrai si le token appartient au GM |
+| `isVisible` | `boolean` | Visibilité du token (utilisé par le Fog of War — Phase 4) |
+
+### `Player`
+
+| Champ | Type | Description |
+|-------|------|-------------|
+| `sessionId` | `string` | Identifiant de session Colyseus |
+| `name` | `string` | Nom affiché du joueur |
+| `color` | `string` | Couleur hexadécimale choisie |
+| `isGM` | `boolean` | Vrai si le joueur est Game Master |
+| `isConnected` | `boolean` | Faux si le joueur est déconnecté temporairement |
+
+### `DungeonState`
+
+| Champ | Type | Description |
+|-------|------|-------------|
+| `players` | `MapSchema<Player>` | Joueurs connectés (clé = sessionId) |
+| `tokens` | `MapSchema<Token>` | Tokens sur la carte (clé = sessionId du propriétaire) |
+| `fogEnabled` | `boolean` | Brouillard de guerre actif |
+| `losEnabled` | `boolean` | Line-of-Sight (raycast) actif |
+| `currentTurnId` | `string` | SessionId du joueur dont c'est le tour |
+| `currentTurn` | `number` | Numéro du tour courant (0 = hors combat) |
+| `combatActive` | `boolean` | Mode combat au tour par tour actif |
+| `gmSessionId` | `string` | SessionId du GM actuel |
+| `tileScale` | `number` | Taille d'une case en mètres (défaut 1.5) |
+| `currentMap` | `string` | Nom de la map active (sans extension .json) |
 
 ---
 

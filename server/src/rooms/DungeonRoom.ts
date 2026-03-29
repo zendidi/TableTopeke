@@ -1,8 +1,9 @@
 import { Room, Client } from "colyseus";
 import { DungeonState, Player, Token } from "../schema/DungeonState";
 
-// Mot de passe GM lu depuis les variables d'environnement, fallback sur "master1234"
-const GM_PASSWORD = process.env.GM_PASSWORD ?? "master1234";
+// Mot de passe GM — priorité à la variable d'environnement, fallback sur "admin"
+// TODO (Phase 5) : remplacer par une authentification sécurisée
+const GM_PASSWORD = process.env.GM_PASSWORD ?? "admin";
 
 // Position de repositionnement des tokens lors d'un changement de map (centre par défaut)
 const DEFAULT_TOKEN_SPAWN = { x: 20, y: 20 };
@@ -18,11 +19,28 @@ interface JoinOptions {
   gmPassword?: string;
 }
 
+// Résultat retourné par onAuth — transmis en 3e paramètre de onJoin
+interface AuthData {
+  isGM: boolean;
+}
+
 // Équivalent d'un NetworkRoomManager Unity
 export class DungeonRoom extends Room<DungeonState> {
 
   // Nombre maximum de joueurs par salle
   maxClients = 20;
+
+  // ── Authentification ─────────────────────────────────────────────────────
+  // Vérifie le mot de passe GM avant d'autoriser l'entrée dans la room.
+  // Un mauvais mot de passe ne rejette pas la connexion : le joueur rejoint en tant que joueur normal.
+  // TODO (Phase 5) : remplacer le mot de passe hardcodé par une vraie auth sécurisée
+  onAuth(_client: Client, options: JoinOptions): AuthData {
+    const isGM = options.gmPassword === GM_PASSWORD;
+    if (options.gmPassword !== undefined && !isGM) {
+      console.warn(`[DungeonRoom] Tentative GM refusée — mauvais mot de passe`);
+    }
+    return { isGM };
+  }
 
   onCreate(_options: Record<string, unknown>): void {
     this.setState(new DungeonState());
@@ -61,25 +79,25 @@ export class DungeonRoom extends Room<DungeonState> {
       if (data.losEnabled !== undefined) this.state.losEnabled = data.losEnabled;
     });
 
-    // ── COMBAT ───────────────────────────────────────────────────────────────
+    // ── COMBAT_ACTION ─────────────────────────────────────────────────────────
     // GM seulement — contrôle du mode combat au tour par tour
-    this.onMessage("COMBAT", (client, data: { action: "start" | "end" | "nextTurn" }) => {
+    this.onMessage("COMBAT_ACTION", (client, data: { action: "start" | "end" | "next" }) => {
       if (this.state.gmSessionId !== client.sessionId) return;
 
       switch (data.action) {
         case "start":
           this.state.combatActive = true;
-          this.state.round = 1;
+          this.state.currentTurn = 1;
           break;
         case "end":
           this.state.combatActive = false;
-          this.state.round = 0;
+          this.state.currentTurn = 0;
           this.state.currentTurnId = "";
           break;
-        case "nextTurn":
+        case "next":
           if (!this.state.combatActive) return;
-          this.state.round += 1;
-          // La logique d'ordre d'initiative peut être étendue ici
+          this.state.currentTurn += 1;
+          // La logique d'ordre d'initiative peut être étendue ici (Phase 3)
           break;
       }
     });
@@ -113,19 +131,13 @@ export class DungeonRoom extends Room<DungeonState> {
       console.log(`[MAP] Chargement de la map "${msg.mapName}" par le GM.`);
     });
 
-    console.log(`[DungeonRoom] Salle créée — GM_PASSWORD=${GM_PASSWORD === "master1234" ? "(défaut)" : "(custom)"}`);
+    console.log(`[DungeonRoom] Salle créée — GM_PASSWORD=${process.env.GM_PASSWORD ? "(custom)" : "(défaut)"}`);
   }
 
-  onJoin(client: Client, options: JoinOptions = {}): void {
+  onJoin(client: Client, options: JoinOptions = {}, auth?: AuthData): void {
     console.log(`[DungeonRoom] Joueur connecté: ${client.sessionId} (name="${options.name ?? "?"}")`);
 
-    // ── Vérification du rôle GM ─────────────────────────────────────────────
-    const wantsGM = options.isGM === true;
-    const isGM    = wantsGM && options.gmPassword === GM_PASSWORD;
-
-    if (wantsGM && !isGM) {
-      console.warn(`[DungeonRoom] Tentative GM refusée pour ${client.sessionId} — mauvais mot de passe`);
-    }
+    const isGM = auth?.isGM ?? false;
 
     // ── Création du joueur ──────────────────────────────────────────────────
     const player = new Player();
@@ -139,17 +151,19 @@ export class DungeonRoom extends Room<DungeonState> {
     // ── Création du token associé au joueur ─────────────────────────────────
     // (équivalent du Instantiate(playerPrefab) de Unity)
     const token = new Token();
-    token.id       = client.sessionId;
-    token.ownerId  = client.sessionId;
-    token.name     = options.name      ?? "Joueur";
-    token.color    = options.color     ?? "#ffffff";
+    token.id        = client.sessionId;
+    token.ownerId   = client.sessionId;
+    token.name      = options.name      ?? "Joueur";
+    token.color     = options.color     ?? "#ffffff";
     token.avatarUrl = options.avatarUrl ?? "";
-    token.hp       = options.hp    ?? 20;
-    token.hpMax    = options.hpMax ?? 20;
-    token.isGM     = isGM;
-    // Position de spawn initiale — les joueurs arrivent en ligne sur la rangée 1
-    token.tileX    = this.state.tokens.size;
-    token.tileY    = 1;
+    token.hp        = options.hp    ?? 20;
+    token.hpMax     = options.hpMax ?? 20;
+    token.isGM      = isGM;
+    token.isVisible = true;
+    // Offset de spawn pour éviter la superposition des tokens
+    const spawnIndex = this.state.tokens.size; // avant le set() courant
+    token.tileX = DEFAULT_TOKEN_SPAWN.x + (spawnIndex % 5);
+    token.tileY = DEFAULT_TOKEN_SPAWN.y + Math.floor(spawnIndex / 5);
     this.state.tokens.set(client.sessionId, token);
 
     // ── Enregistrement du GM ────────────────────────────────────────────────
@@ -159,19 +173,41 @@ export class DungeonRoom extends Room<DungeonState> {
     }
   }
 
-  onLeave(client: Client): void {
-    console.log(`[DungeonRoom] Joueur déconnecté: ${client.sessionId}`);
+  async onLeave(client: Client, consented: boolean): Promise<void> {
+    console.log(`[DungeonRoom] Joueur déconnecté: ${client.sessionId} (consented=${consented})`);
 
-    // Marque le joueur comme déconnecté (le token reste sur la carte)
+    // Marquer le joueur comme déconnecté temporairement
     const player = this.state.players.get(client.sessionId);
     if (player) {
       player.isConnected = false;
     }
 
-    // Si le GM se déconnecte, libère le slot GM
+    if (!consented) {
+      try {
+        // Attendre une éventuelle reconnexion pendant 30 secondes
+        await this.allowReconnection(client, 30);
+
+        // Reconnecté avec succès — restaurer le statut du joueur
+        const reconnectedPlayer = this.state.players.get(client.sessionId);
+        if (reconnectedPlayer) {
+          reconnectedPlayer.isConnected = true;
+          console.log(`[DungeonRoom] Joueur reconnecté: ${client.sessionId}`);
+        }
+        return;
+      } catch {
+        // Délai de reconnexion expiré — procéder à la suppression
+        console.log(`[DungeonRoom] Reconnexion expirée pour: ${client.sessionId}`);
+      }
+    }
+
+    // Si le GM se déconnecte définitivement, libère le slot GM EN PREMIER
     if (this.state.gmSessionId === client.sessionId) {
       this.state.gmSessionId = "";
       console.log("[DungeonRoom] Le GM s'est déconnecté — slot GM libéré");
     }
+
+    // Supprimer le joueur et son token de la map
+    this.state.players.delete(client.sessionId);
+    this.state.tokens.delete(client.sessionId);
   }
 }
