@@ -49,26 +49,37 @@ TableTopeke/
 ├── client/                      # Frontend Phaser 3 (TypeScript + Vite)
 │   ├── src/
 │   │   ├── scenes/
-│   │   │   ├── DungeonScene.ts  # Scène principale (carte Tiled, tokens, caméra)
-│   │   │   └── UIScene.ts       # Scène UI (HUD, panneau GM, initiative)
+│   │   │   ├── BootScene.ts     # Chargement initial (assets, index maps/images)
+│   │   │   ├── LobbyScene.ts    # Connexion Colyseus
+│   │   │   ├── DungeonScene.ts  # Scène principale (carte Tiled ou image-map, tokens)
+│   │   │   └── MapEditorScene.ts # Éditeur de map par images (GM only, Phase 1c)
 │   │   ├── network/
 │   │   │   └── ColyseusClient.ts # Connexion et gestion des messages
-│   │   ├── objects/
-│   │   │   └── TokenSprite.ts   # Classe sprite de token avec interpolation
-│   │   └── main.ts              # Point d'entrée Phaser
+│   │   ├── ui/
+│   │   │   ├── GMPanel.ts       # Panneau GM HTML overlay
+│   │   │   └── ImagePalette.ts  # Palette d'images HTML (MapEditorScene, Phase 1c)
+│   │   ├── types/
+│   │   │   └── MapTypes.ts      # Types partagés : PlacedImage, ImageMapData, MapIndex
+│   │   └── main.ts              # Point d'entrée Phaser + window.__phaserGame
 │   └── public/
-│       ├── maps/                # Cartes exportées depuis Tiled (JSON)
+│       ├── maps/                # Cartes exportées depuis Tiled ou éditeur (JSON)
 │       │   ├── index.json       # Index des maps disponibles (sélecteur GM)
 │       │   └── grande-salle.json # Map de test Phase 1a (40×40 cases)
+│       ├── images/              # Images PNG pour l'éditeur de map (Phase 1c)
+│       │   ├── index.json       # Registre des images disponibles dans la palette
+│       │   ├── salle-principale.png
+│       │   ├── couloir-horizontal.png
+│       │   └── salle-secondaire.png
 │       └── tilesets/            # Tilesets graphiques
 │           └── 0x72_dungeon.png # Tileset 0x72 Dungeon (16×16 px par tuile)
 │
-├── docs/                        # Documentation (ce répertoire)
+├── docs/                        # Documentation
 │   ├── ROADMAP.md
 │   ├── ARCHITECTURE.md
 │   ├── INSTALL.md
 │   ├── GAMEPLAY.md
-│   └── TILED_GUIDE.md           # Guide créateur de maps Tiled
+│   ├── TILED_GUIDE.md           # Guide créateur de maps Tiled
+│   └── MAP_EDITOR_GUIDE.md      # Guide éditeur de map par images (Phase 1c)
 │
 ├── start.bat                    # Lancement Windows (Option A)
 ├── start.sh                     # Lancement Mac/Linux (Option A)
@@ -286,6 +297,50 @@ Flux complet :
 3. Serveur valide le rôle GM, met à jour `state.currentMap`, repositionne les tokens
 4. Colyseus delta broadcast → tous les clients reçoivent le changement
 5. Chaque client écoute `state.listen("currentMap")` → `DungeonScene._loadMap()` rechargée
+
+---
+
+## Types de maps (Phase 1c)
+
+`DungeonScene` supporte deux formats de maps discriminés par le champ `type` dans `maps/index.json` :
+
+### `tiled` — Map Tiled JSON classique (défaut)
+
+- Créée avec **Tiled Map Editor** (outil externe)
+- Layers obligatoires : `sol`, `murs` (avec collisions)
+- Tileset : `0x72_dungeon.png` (16×16 px/tuile)
+- Chargement via `this.make.tilemap()` + `createLayer()`
+
+### `image-map` — Map composée d'images PNG
+
+- Créée avec l'**éditeur de map intégré** (`MapEditorScene`)
+- Composée de `PlacedImage` positionnées sur une grille 64 px/case
+- Images sources dans `client/public/images/`
+- Format JSON généré par l'éditeur (téléchargement navigateur)
+- Chargement via `fetch()` + `this.add.image()` dynamique
+
+### Discriminant dans `maps/index.json`
+
+```json
+{
+  "maps": [
+    { "id": "grande-salle", "label": "Grande Salle",  "type": "tiled"     },
+    { "id": "ma-map",       "label": "Ma Map Custom", "type": "image-map" }
+  ],
+  "defaultMap": "grande-salle"
+}
+```
+
+> Si `type` est absent, `DungeonScene` suppose `"tiled"` (rétrocompatibilité avec les maps existantes).
+
+### Types TypeScript (`client/src/types/MapTypes.ts`)
+
+| Interface | Description |
+|-----------|-------------|
+| `PlacedImage` | Une image positionnée sur la grille (id, src, x, y, widthInTiles, heightInTiles) |
+| `ImageMapData` | Format JSON complet d'une image-map (`type: "image-map"`) |
+| `MapIndexEntry` | Entrée de `maps/index.json` avec champ `type` optionnel |
+| `MapIndex` | Format complet de `maps/index.json` |
 
 ---
 

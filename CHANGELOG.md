@@ -11,6 +11,43 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/lang/fr/).
 
 ---
 
+## [0.4.0] — Phase 1c : Éditeur de map par images (GM only)
+
+### Ajouté
+- `client/public/images/` — dossier d'images sources pour l'éditeur de map
+  - 3 placeholders PNG générés (320×240 px) : `salle-principale.png`, `couloir-horizontal.png`, `salle-secondaire.png`
+  - `images/index.json` — registre des images disponibles dans la palette (id, label, file, defaultWidthInTiles, defaultHeightInTiles)
+- `client/src/types/MapTypes.ts` — types partagés :
+  - `PlacedImage` — image positionnée sur la grille
+  - `ImageMapData` — format JSON d'une image-map
+  - `MapIndexEntry` / `MapIndex` — format `maps/index.json` avec champ `type` optionnel
+- `client/src/ui/ImagePalette.ts` — panel HTML overlay côté gauche (miniatures + bouton "Placer")
+- `client/src/scenes/MapEditorScene.ts` — scène Phaser complète :
+  - Accès GM uniquement (redirect vers `DungeonScene` sinon)
+  - Grille 80×60 cases × 64 px/case, fond noir
+  - Caméra bornée + zoom initial 0.5× (molette 0.2–2.0)
+  - Palette d'images + mode placement snap-to-grid
+  - Drag clic-gauche pour déplacer une image placée
+  - Clic droit pour supprimer une image placée
+  - Barre d'outils HTML (nom, 💾 Sauvegarder, 📂 Charger, 🗑️ Effacer, 🎮 Retour)
+  - `saveMap()` → téléchargement JSON navigateur
+  - `loadMapFromFile()` → FileReader + validation `type === "image-map"`
+  - `shutdown()` → nettoyage palette + barre d'outils
+- `docs/MAP_EDITOR_GUIDE.md` — guide complet en français pour utiliser l'éditeur
+
+### Modifié
+- `client/src/main.ts` : ajout `MapEditorScene` dans la liste des scènes + `window.__phaserGame` exposé
+- `client/src/scenes/BootScene.ts` : chargement de `images/index.json` (clé `images-index`)
+- `client/src/scenes/DungeonScene.ts` :
+  - Refactorisation `_loadMap()` → dispatch `_loadTiledMap()` / `_loadImageMap()` selon `type`
+  - `_loadImageMap()` : `fetch` + chargement dynamique des images + grille légère
+  - Nettoyage des sprites image-map lors des changements de map
+- `client/src/ui/GMPanel.ts` : bouton "🗺️ Éditeur de map" dans la section Map (lance `MapEditorScene`)
+- `docs/ROADMAP.md` : Phase 1c ✅ Terminé + tableau de synthèse mis à jour
+- `docs/ARCHITECTURE.md` : structure dossiers mise à jour + section "Types de maps" (tiled vs image-map)
+
+---
+
 ## [0.3.0] — Phase 1b : Sélecteur de map GM + LOAD_MAP + sync clients
 
 ### Ajouté

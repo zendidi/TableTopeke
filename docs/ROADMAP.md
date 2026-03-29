@@ -18,6 +18,7 @@
 | **0** | Setup & Scaffold | ✅ Terminé |
 | **1a** | Tileset 0x72 + rendu carte Tiled + map de test | ✅ Terminé |
 | **1b** | Sélecteur de map GM + sync Colyseus `LOAD_MAP` | ✅ Terminé |
+| **1c** | Éditeur de map par images drag & drop (GM only) | ✅ Terminé |
 | **2** | Serveur Colyseus — état & rôles avancés | ⬜ À faire |
 | **3** | Combat & Distances | ⬜ À faire |
 | **4** | Fog of War (Ligne de vue réelle) | ⬜ À faire |
@@ -101,6 +102,44 @@
 - Tous les clients voient la nouvelle map en < 500ms
 - Les tokens sont repositionnés sur la nouvelle map (case 20,20)
 - Un joueur non-GM ne peut pas déclencher `LOAD_MAP` (vérifié côté serveur)
+
+---
+
+## Phase 1c — Éditeur de map par images ✅ Terminé
+
+### Tâches
+
+- [x] `client/public/images/` avec 3 placeholders PNG (320×240) + `index.json`
+- [x] Types partagés `client/src/types/MapTypes.ts` (`PlacedImage`, `ImageMapData`, `MapIndex`)
+- [x] Composant `ImagePalette` (HTML overlay fixe gauche) — liste images depuis `images/index.json`
+- [x] Scène `MapEditorScene` (Phaser) :
+  - [x] Accès GM uniquement (redirect vers DungeonScene sinon)
+  - [x] Grille 80×60 cases × 64 px, fond noir
+  - [x] Caméra bornée, zoom 0.5× initial (molette 0.2–2.0)
+  - [x] Palette d'images + mode placement (snap à la grille)
+  - [x] Drag pour déplacer une image placée
+  - [x] Clic droit pour supprimer une image placée
+  - [x] Barre d'outils HTML : nom map, 💾 Sauvegarder, 📂 Charger, 🗑️ Effacer, 🎮 Retour
+  - [x] `saveMap()` → téléchargement JSON navigateur
+  - [x] `loadMapFromFile()` → FileReader, validation `type === "image-map"`
+  - [x] Nettoyage palette + toolbar au `shutdown()`
+- [x] `DungeonScene` : support format `image-map` via `fetch` + chargement dynamique des images
+- [x] `MapEditorScene` enregistrée dans `main.ts`
+- [x] `window.__phaserGame` exposé dans `main.ts`
+- [x] Bouton "🗺️ Éditeur de map" dans `GMPanel`
+- [x] `BootScene` charge `images/index.json`
+- [x] Guide `docs/MAP_EDITOR_GUIDE.md`
+
+### ✅ Critères de validation
+
+- Le bouton "🗺️ Éditeur de map" est visible dans le panel GM uniquement
+- Cliquer le bouton lance `MapEditorScene` (grille + palette visibles)
+- Cliquer "Placer" puis la grille place l'image snappée à la case
+- Clic droit sur une image placée → suppression
+- Bouton "Sauvegarder" → télécharge `nom-map.json` avec `"type": "image-map"`
+- Bouton "Retour au donjon" → retour propre à `DungeonScene` (palette détruite)
+- Joueur non-GM redirigé vers `DungeonScene` s'il tente d'accéder à `MapEditorScene`
+- `docs/MAP_EDITOR_GUIDE.md` existe et est complet
 
 ---
 

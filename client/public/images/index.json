@@ -1,0 +1,8 @@
+{
+  "_comment": "Lister ici toutes les images disponibles dans ce dossier. Elles apparaîtront dans la palette de l'éditeur de map.",
+  "images": [
+    { "id": "salle-principale",   "label": "Salle Principale",   "file": "salle-principale.png",   "defaultWidthInTiles": 20, "defaultHeightInTiles": 15 },
+    { "id": "couloir-horizontal", "label": "Couloir Horizontal", "file": "couloir-horizontal.png", "defaultWidthInTiles": 10, "defaultHeightInTiles": 4  },
+    { "id": "salle-secondaire",   "label": "Salle Secondaire",   "file": "salle-secondaire.png",   "defaultWidthInTiles": 15, "defaultHeightInTiles": 12 }
+  ]
+}

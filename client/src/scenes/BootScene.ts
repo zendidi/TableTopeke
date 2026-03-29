@@ -48,6 +48,10 @@ export class BootScene extends Phaser.Scene {
     // ── Chargement de l'index des maps ───────────────────────────────────────
     // Source de vérité pour la liste des maps disponibles (sélecteur GM Phase 1b)
     this.load.json("maps-index", "maps/index.json");
+
+    // ── Chargement de l'index des images ─────────────────────────────────────
+    // Utilisé par MapEditorScene (Phase 1c) pour peupler la palette d'images
+    this.load.json("images-index", "images/index.json");
   }
 
   create(): void {

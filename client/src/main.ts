@@ -1,7 +1,15 @@
 import Phaser from "phaser";
-import { BootScene }    from "./scenes/BootScene";
-import { LobbyScene }   from "./scenes/LobbyScene";
-import { DungeonScene } from "./scenes/DungeonScene";
+import { BootScene }      from "./scenes/BootScene";
+import { LobbyScene }     from "./scenes/LobbyScene";
+import { DungeonScene }   from "./scenes/DungeonScene";
+import { MapEditorScene } from "./scenes/MapEditorScene";
+
+// Extension globale de Window pour exposer l'instance Phaser aux overlays HTML
+declare global {
+  interface Window {
+    __phaserGame: Phaser.Game;
+  }
+}
 
 // Point d'entrée de l'application — équivalent du bootstrap Unity
 const config: Phaser.Types.Core.GameConfig = {
@@ -11,11 +19,12 @@ const config: Phaser.Types.Core.GameConfig = {
   backgroundColor: "#1a1a2e",
   parent:          "game-container",
   pixelArt:        true,
-  scene:           [BootScene, LobbyScene, DungeonScene],
+  scene:           [BootScene, LobbyScene, DungeonScene, MapEditorScene],
   scale: {
     mode:       Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
 };
 
-new Phaser.Game(config);
+// Exposer l'instance Phaser pour permettre aux overlays HTML (GMPanel, etc.) de changer de scène
+window.__phaserGame = new Phaser.Game(config);

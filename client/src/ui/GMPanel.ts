@@ -126,6 +126,16 @@ export class GMPanel {
     });
     wrapper.appendChild(btnLoad);
 
+    // Bouton éditeur de map — lance MapEditorScene (Phase 1c)
+    const btnEditor = document.createElement("button");
+    btnEditor.textContent = "🗺️ Éditeur de map";
+    Object.assign(btnEditor.style, { ...this._btnStyle("#4a2d8b"), marginTop: "6px", width: "100%" });
+    btnEditor.addEventListener("click", () => {
+      // Accéder à l'instance Phaser exposée dans main.ts via window.__phaserGame
+      window.__phaserGame?.scene.start("MapEditorScene");
+    });
+    wrapper.appendChild(btnEditor);
+
     return wrapper;
   }
 
