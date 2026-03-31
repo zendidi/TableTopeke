@@ -1,11 +1,17 @@
 {
-  "_comment": "Ajouter le nom (sans .json) de chaque nouvelle map ici pour qu'elle apparaisse dans le sélecteur GM (Phase 1b)",
+  "_comment": "Ajouter le nom (sans .json) de chaque nouvelle map ici pour qu'elle apparaisse dans le sélecteur GM. Les maps de type 'image-map' sont chargées via fetch ; les maps de type 'tiled' (ou sans type) utilisent le système Phaser Tilemap.",
   "maps": [
     {
+      "id": "salle-images",
+      "label": "Salle (Images)",
+      "type": "image-map",
+      "description": "Map de démonstration composée de PNG — système image-map"
+    },
+    {
       "id": "grande-salle",
-      "label": "Grande Salle",
-      "description": "Salle ouverte 40×40 cases — map de test Phase 1a"
+      "label": "Grande Salle (Tileset)",
+      "description": "Salle ouverte 40×40 cases — ancienne map Tiled (tileset)"
     }
   ],
-  "defaultMap": "grande-salle"
+  "defaultMap": "salle-images"
 }

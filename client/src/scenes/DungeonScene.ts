@@ -236,7 +236,10 @@ export class DungeonScene extends Phaser.Scene {
 
     this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
 
-    // Dessiner la grille par-dessus la carte Tiled
+    // Rétablir le zoom initial adapté aux tuiles 16 px
+    this.cameras.main.setZoom(INITIAL_ZOOM);
+
+    // Dessiner la grille par-dessus la carte Tiled (pas = 16 px = TILE_SIZE)
     this._drawGrid(map.widthInPixels, map.heightInPixels);
   }
 
@@ -286,14 +289,17 @@ export class DungeonScene extends Phaser.Scene {
         });
       }
 
-      // Dessiner la grille par-dessus les images (remplace le dessin inline précédent)
-      this._drawGrid(mapWidth, mapHeight);
+      // Dessiner la grille par-dessus les images (pas = tileSize de la map)
+      this._drawGrid(mapWidth, mapHeight, tileSize);
 
       // Les tokens doivent rester au-dessus
       this.tokenContainer.setDepth(10);
 
       // Bornes caméra
       this.cameras.main.setBounds(0, 0, mapWidth, mapHeight);
+
+      // Zoom adapté aux grandes image-maps (tuiles 64 px) — le joueur peut zoomer/dézoomer
+      this.cameras.main.setZoom(0.5);
 
       console.log(`[MAP] Image-map "${mapName}" chargée (${data.images.length} images, ${data.widthInTiles}×${data.heightInTiles} cases).`);
     } catch (err) {
@@ -302,17 +308,18 @@ export class DungeonScene extends Phaser.Scene {
   }
 
   // ── Grille unifiée ──────────────────────────────────────────────────────
-  // Dessine une grille tous les TILE_SIZE pixels par-dessus la carte active.
+  // Dessine une grille tous les `step` pixels par-dessus la carte active.
   // Depth 5 : au-dessus de la carte (0–2), sous les tokens (10).
-  private _drawGrid(widthPx: number, heightPx: number): void {
+  // step = TILE_SIZE (16) pour les maps Tiled, tileSize (64) pour les image-maps.
+  private _drawGrid(widthPx: number, heightPx: number, step: number = TILE_SIZE): void {
     const g = this.add.graphics();
     this.gridGraphics = g;
     g.lineStyle(1, 0x444466, 0.25);
-    for (let x = 0; x <= widthPx; x += TILE_SIZE) {
+    for (let x = 0; x <= widthPx; x += step) {
       g.moveTo(x, 0);
       g.lineTo(x, heightPx);
     }
-    for (let y = 0; y <= heightPx; y += TILE_SIZE) {
+    for (let y = 0; y <= heightPx; y += step) {
       g.moveTo(0,       y);
       g.lineTo(widthPx, y);
     }

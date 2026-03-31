@@ -1,0 +1,34 @@
+{
+  "id": "salle-images",
+  "label": "Salle (Images)",
+  "type": "image-map",
+  "widthInTiles": 80,
+  "heightInTiles": 60,
+  "tileSize": 64,
+  "images": [
+    {
+      "id": "img_0",
+      "src": "images/salle-principale.png",
+      "x": 2,
+      "y": 2,
+      "widthInTiles": 20,
+      "heightInTiles": 15
+    },
+    {
+      "id": "img_1",
+      "src": "images/couloir-horizontal.png",
+      "x": 22,
+      "y": 7,
+      "widthInTiles": 10,
+      "heightInTiles": 4
+    },
+    {
+      "id": "img_2",
+      "src": "images/salle-secondaire.png",
+      "x": 32,
+      "y": 2,
+      "widthInTiles": 15,
+      "heightInTiles": 12
+    }
+  ]
+}
