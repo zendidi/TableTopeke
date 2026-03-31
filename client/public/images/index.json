@@ -1,8 +1,26 @@
 {
-  "_comment": "Lister ici toutes les images disponibles dans ce dossier. Elles apparaîtront dans la palette de l'éditeur de map.",
+  "_comment": "Généré automatiquement par tools/generate-images-index.js — relancez le script après avoir ajouté ou retiré des PNG. defaultWidthInTiles / defaultHeightInTiles : taille de placement par défaut dans l'éditeur (cases de 64 px). Ces valeurs sont calculées depuis les dimensions réelles du PNG. Modifiez-les manuellement si nécessaire ; elles seront préservées lors des prochains appels du script (utilisez --force pour tout recalculer). Note : dans un fichier de map (.json), une image peut être agrandie indépendamment de ces valeurs par défaut.",
   "images": [
-    { "id": "salle-principale",   "label": "Salle Principale",   "file": "salle-principale.png",   "defaultWidthInTiles": 20, "defaultHeightInTiles": 15 },
-    { "id": "couloir-horizontal", "label": "Couloir Horizontal", "file": "couloir-horizontal.png", "defaultWidthInTiles": 10, "defaultHeightInTiles": 4  },
-    { "id": "salle-secondaire",   "label": "Salle Secondaire",   "file": "salle-secondaire.png",   "defaultWidthInTiles": 15, "defaultHeightInTiles": 12 }
+    {
+      "id": "couloir-horizontal",
+      "label": "Couloir Horizontal",
+      "file": "couloir-horizontal.png",
+      "defaultWidthInTiles": 5,
+      "defaultHeightInTiles": 4
+    },
+    {
+      "id": "salle-principale",
+      "label": "Salle Principale",
+      "file": "salle-principale.png",
+      "defaultWidthInTiles": 5,
+      "defaultHeightInTiles": 4
+    },
+    {
+      "id": "salle-secondaire",
+      "label": "Salle Secondaire",
+      "file": "salle-secondaire.png",
+      "defaultWidthInTiles": 5,
+      "defaultHeightInTiles": 4
+    }
   ]
 }

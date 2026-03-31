@@ -1,11 +1,12 @@
 {
-  "_comment": "Ajouter le nom (sans .json) de chaque nouvelle map ici pour qu'elle apparaisse dans le sélecteur GM (Phase 1b)",
+  "_comment": "Ajouter ici chaque map image-map (sans extension .json) pour qu'elle apparaisse dans le sélecteur GM. Utilisez tools/generate-images-index.js pour régénérer images/index.json après avoir ajouté des PNG.",
   "maps": [
     {
-      "id": "grande-salle",
-      "label": "Grande Salle",
-      "description": "Salle ouverte 40×40 cases — map de test Phase 1a"
+      "id": "salle-images",
+      "label": "Salle (Images)",
+      "type": "image-map",
+      "description": "Map de démonstration composée de PNG — système image-map"
     }
   ],
-  "defaultMap": "grande-salle"
+  "defaultMap": "salle-images"
 }

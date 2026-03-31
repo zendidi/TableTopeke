@@ -561,6 +561,13 @@ export class MapEditorScene extends Phaser.Scene {
               this._renderPlacedImage(placed);
               loaded++;
               if (loaded === images.length) {
+                // Mettre à jour _nextImageId pour éviter les collisions d'ID lors
+                // des prochains placements (les IDs sont au format "img_N")
+                const maxId = this.placedImages.reduce((max, p) => {
+                  const match = p.id.match(/^img_(\d+)$/);
+                  return match ? Math.max(max, parseInt(match[1], 10)) : max;
+                }, -1);
+                this._nextImageId = maxId + 1;
                 this._markSaved();
                 resolve();
               }
