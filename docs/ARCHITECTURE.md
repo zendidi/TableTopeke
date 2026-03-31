@@ -37,11 +37,9 @@ TableTopeke/
 ├── server/                      # Serveur Colyseus (Node.js + TypeScript)
 │   ├── src/
 │   │   ├── rooms/
-│   │   │   └── GameRoom.ts      # Room principale, logique de jeu
-│   │   ├── schemas/
-│   │   │   ├── DungeonState.ts  # État global de la room
-│   │   │   ├── Token.ts         # Schéma d'un token (joueur/ennemi)
-│   │   │   └── Player.ts        # Schéma d'un joueur connecté
+│   │   │   └── DungeonRoom.ts   # Room principale, logique de jeu et messages
+│   │   ├── schema/
+│   │   │   └── DungeonState.ts  # État global (DungeonState), Token et Player
 │   │   └── index.ts             # Point d'entrée du serveur
 │   ├── package.json
 │   └── tsconfig.json
@@ -57,7 +55,8 @@ TableTopeke/
 │   │   │   └── ColyseusClient.ts # Connexion et gestion des messages
 │   │   ├── ui/
 │   │   │   ├── GMPanel.ts       # Panneau GM HTML overlay
-│   │   │   └── ImagePalette.ts  # Palette d'images HTML (MapEditorScene, Phase 1c)
+│   │   │   ├── ImagePalette.ts  # Palette d'images HTML (MapEditorScene, Phase 1c)
+│   │   │   └── DebugPanel.ts    # Panneau de debug (toggle avec la touche `)
 │   │   ├── types/
 │   │   │   └── MapTypes.ts      # Types partagés : PlacedImage, ImageMapData, MapIndex
 │   │   └── main.ts              # Point d'entrée Phaser + window.__phaserGame
@@ -79,7 +78,8 @@ TableTopeke/
 │   ├── INSTALL.md
 │   ├── GAMEPLAY.md
 │   ├── TILED_GUIDE.md           # Guide créateur de maps Tiled
-│   └── MAP_EDITOR_GUIDE.md      # Guide éditeur de map par images (Phase 1c)
+│   ├── MAP_EDITOR_GUIDE.md      # Guide éditeur de map par images (Phase 1c)
+│   └── DEBUG_GUIDE.md           # Guide de débogage (Monitor, DebugPanel, DevTools)
 │
 ├── start.bat                    # Lancement Windows (Option A)
 ├── start.sh                     # Lancement Mac/Linux (Option A)
@@ -137,10 +137,12 @@ Colyseus patch cycle :
 ### Game Master
 
 ```typescript
-// Authentification GM à la connexion (Phase 2)
-// TODO (Phase 5) : remplacer le mot de passe hardcodé par une vraie auth
+// Authentification GM à la connexion (Phase 2a)
+// Le mot de passe GM est lu depuis la variable d'env GM_PASSWORD (défaut : "admin")
+// TODO (Phase 5) : remplacer le mot de passe hardcodé par une vraie auth sécurisée
 onAuth(client, options) {
-  const isGM = options.gmPassword === "admin";
+  const GM_PASSWORD = process.env.GM_PASSWORD ?? "admin";
+  const isGM = options.gmPassword === GM_PASSWORD;
   return { isGM };
 }
 ```
@@ -206,15 +208,15 @@ Pour un développeur Unity/C#, voici les équivalents conceptuels :
 
 | Unity / C# | Équivalent TableTopeke | Fichier |
 |------------|----------------------|---------|
-| `MonoBehaviour.Update()` | `scene.update()` Phaser | `GameScene.ts` |
-| `NetworkTransform` (Mirror/Netcode) | Colyseus Schema + interpolation | `TokenSprite.ts` |
-| `[SyncVar]` | `@type()` decorator Colyseus | `Token.ts` |
-| `PhotonNetwork.IsMasterClient` | `player.isGM` | `GameRoom.ts` |
+| `MonoBehaviour.Update()` | `scene.update()` Phaser | `DungeonScene.ts` |
+| `NetworkTransform` (Mirror/Netcode) | Colyseus Schema + interpolation (tween 150ms) | `DungeonScene.ts` |
+| `[SyncVar]` | `@type()` decorator Colyseus | `DungeonState.ts` |
+| `PhotonNetwork.IsMasterClient` | `player.isGM` | `DungeonRoom.ts` |
 | `ScriptableObject` | JSON config joueur | `player-config.json` |
-| `Tilemap` component | `this.make.tilemap()` Phaser | `GameScene.ts` |
-| `Camera.main` | `this.cameras.main` Phaser | `GameScene.ts` |
-| `Physics.Raycast()` | Algorithme raycasting grille | `FogOfWarSystem.ts` |
-| `Canvas` / `UI Toolkit` | Scène Phaser dédiée UI | `UIScene.ts` |
+| `Tilemap` component | `this.make.tilemap()` Phaser | `DungeonScene.ts` |
+| `Camera.main` | `this.cameras.main` Phaser | `DungeonScene.ts` |
+| `Physics.Raycast()` | Algorithme raycasting grille | Phase 4 (non implémenté) |
+| `Canvas` / `UI Toolkit` | HTML overlay via DOM | `GMPanel.ts`, `ImagePalette.ts` |
 | `NavMesh` / `A*` | Pathfinding A* plugin Phaser | Phase 3+ |
 
 > **Note** : TypeScript est suffisamment proche de C# pour que la courbe d'apprentissage soit douce. Les types, classes, interfaces, génériques — les concepts sont identiques.

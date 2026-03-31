@@ -1,6 +1,7 @@
 import { network } from "../network/ColyseusClient";
 import type { Token } from "../../../server/src/schema/DungeonState";
 import { GMPanel } from "../ui/GMPanel";
+import { DebugPanel } from "../ui/DebugPanel";
 import type { ImageMapData, MapIndex, MapIndexEntry } from "../types/MapTypes";
 
 // Taille d'une case en pixels — correspond aux tuiles 16×16 du tileset 0x72 Dungeon
@@ -35,6 +36,9 @@ export class DungeonScene extends Phaser.Scene {
 
   // Panneau GM (HTML overlay) — null si le joueur n'est pas GM
   private gmPanel: GMPanel | null = null;
+
+  // Panneau de debug (HTML overlay) — toggle avec la touche `
+  private debugPanel: DebugPanel | null = null;
 
   // État du scroll caméra via clic droit
   private isDragging: boolean = false;
@@ -120,6 +124,9 @@ export class DungeonScene extends Phaser.Scene {
         this.gmPanel?.updatePlayers();
       });
     }
+
+    // ── Panneau de debug (overlay HTML) — toggle avec la touche ` ────────────
+    this.debugPanel = new DebugPanel(network.room, network.isGM);
 
     // ── Gestion des inputs ──────────────────────────────────────────────────
     this._setupInput();
@@ -393,5 +400,15 @@ export class DungeonScene extends Phaser.Scene {
       const newZoom = Phaser.Math.Clamp(zoom - dy * 0.001, 0.3, 2.5);
       this.cameras.main.setZoom(newZoom);
     });
+  }
+
+  // ── Nettoyage lors du déchargement de la scène ────────────────────────────
+  // Appelé par Phaser quand la scène est arrêtée (ex: passage à MapEditorScene)
+  // S'abonne à l'événement shutdown Phaser pour détruire les overlays HTML
+  shutdown(): void {
+    this.gmPanel?.destroy();
+    this.gmPanel = null;
+    this.debugPanel?.destroy();
+    this.debugPanel = null;
   }
 }
