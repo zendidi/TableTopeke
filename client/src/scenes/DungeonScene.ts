@@ -15,6 +15,9 @@ const INITIAL_ZOOM = 2.5;
 // Map par défaut utilisée si l'index est vide ou l'état Colyseus non initialisé
 const DEFAULT_MAP_NAME = "grande-salle";
 
+// Rayon du cercle de portée en cases (bonus feature 4)
+const RANGE_CIRCLE_TILES = 6;
+
 // DungeonScene — scène de jeu principale
 // Équivalent d'une GameScene Unity avec GameObjects synchronisés via Colyseus
 export class DungeonScene extends Phaser.Scene {
@@ -32,7 +35,21 @@ export class DungeonScene extends Phaser.Scene {
 
   // Sprites des images placées pour les image-maps (détruits lors d'un changement de map)
   private currentImageSprites: Phaser.GameObjects.Image[] = [];
-  private currentImageGrid: Phaser.GameObjects.Graphics | null = null;
+
+  // Grille superposée à la carte (unifiée Tiled + image-map)
+  private gridGraphics: Phaser.GameObjects.Graphics | null = null;
+
+  // Échelle locale (mètres par case) — synchronisée depuis l'état Colyseus
+  private tileScale: number = 1.5;
+
+  // Outil de mesure Shift+clic-glisser
+  private isMeasuring: boolean = false;
+  private measureStart: { tileX: number; tileY: number } | null = null;
+  private measureGraphics: Phaser.GameObjects.Graphics | null = null;
+  private measureLabel: Phaser.GameObjects.Text | null = null;
+
+  // Cercle de portée affiché sur le token sélectionné (bonus)
+  private rangeCircle: Phaser.GameObjects.Graphics | null = null;
 
   // Panneau GM (HTML overlay) — null si le joueur n'est pas GM
   private gmPanel: GMPanel | null = null;
@@ -85,6 +102,24 @@ export class DungeonScene extends Phaser.Scene {
     // ── Zoom initial ─────────────────────────────────────────────────────────
     this.cameras.main.setZoom(INITIAL_ZOOM);
 
+    // ── Outils de mesure (créés une seule fois, cachés par défaut) ───────────
+    this.measureGraphics = this.add.graphics();
+    this.measureGraphics.setDepth(20);
+    this.measureGraphics.setVisible(false);
+
+    this.measureLabel = this.add.text(0, 0, "", {
+      fontSize:        "13px",
+      color:           "#ffffff",
+      fontFamily:      "monospace",
+      backgroundColor: "rgba(0,0,0,0.6)",
+      padding:         { x: 4, y: 2 },
+    }).setDepth(20).setVisible(false).setOrigin(0.5, 0.5);
+
+    // ── Cercle de portée (bonus) ──────────────────────────────────────────────
+    this.rangeCircle = this.add.graphics();
+    this.rangeCircle.setDepth(8);
+    this.rangeCircle.setVisible(false);
+
     // ── Charger la map initiale depuis l'état Colyseus ───────────────────────
     const initialMap = network.room.state.currentMap ?? DEFAULT_MAP_NAME;
     this._loadMap(initialMap);
@@ -94,6 +129,12 @@ export class DungeonScene extends Phaser.Scene {
       console.log(`[MAP] Changement de map → ${newMap}`);
       this._loadMap(newMap);
       this.gmPanel?.updateCurrentMap(newMap);
+    });
+
+    // ── Synchroniser l'échelle locale depuis Colyseus ────────────────────────
+    this.tileScale = network.room.state.tileScale;
+    network.room.state.listen("tileScale", (newScale: number) => {
+      this.tileScale = newScale;
     });
 
     // ── Synchronisation des tokens Colyseus ─────────────────────────────────
@@ -114,6 +155,8 @@ export class DungeonScene extends Phaser.Scene {
         (tokenId, hp) => network.updateHp(tokenId, hp),
         network.room.state.players,
         network.room.state.tokens,
+        (visible) => this.setGridVisible(visible),
+        network.room.state.tileScale,
       );
 
       // Mettre à jour la liste des joueurs lorsqu'un joueur rejoint ou quitte la room
@@ -144,8 +187,10 @@ export class DungeonScene extends Phaser.Scene {
     // Nettoyer les images d'une image-map précédente
     this.currentImageSprites.forEach((s) => s.destroy());
     this.currentImageSprites = [];
-    this.currentImageGrid?.destroy();
-    this.currentImageGrid = null;
+
+    // Détruire la grille précédente (unifiée Tiled + image-map)
+    this.gridGraphics?.destroy();
+    this.gridGraphics = null;
 
     // Déterminer le type de map depuis maps/index.json
     const mapsIndex = this.cache.json.get("maps-index") as MapIndex | null;
@@ -190,6 +235,9 @@ export class DungeonScene extends Phaser.Scene {
     this.tokenContainer.setDepth(10);
 
     this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
+
+    // Dessiner la grille par-dessus la carte Tiled
+    this._drawGrid(map.widthInPixels, map.heightInPixels);
   }
 
   // ── Chargement d'une image-map (format Phase 1c) ─────────────────────────
@@ -238,20 +286,8 @@ export class DungeonScene extends Phaser.Scene {
         });
       }
 
-      // Dessiner une grille légère par-dessus les images
-      const grid = this.add.graphics();
-      this.currentImageGrid = grid;
-      grid.lineStyle(1, 0x444466, 0.3);
-      for (let x = 0; x <= data.widthInTiles; x++) {
-        grid.moveTo(x * tileSize, 0);
-        grid.lineTo(x * tileSize, mapHeight);
-      }
-      for (let y = 0; y <= data.heightInTiles; y++) {
-        grid.moveTo(0,        y * tileSize);
-        grid.lineTo(mapWidth, y * tileSize);
-      }
-      grid.strokePath();
-      grid.setDepth(1);
+      // Dessiner la grille par-dessus les images (remplace le dessin inline précédent)
+      this._drawGrid(mapWidth, mapHeight);
 
       // Les tokens doivent rester au-dessus
       this.tokenContainer.setDepth(10);
@@ -263,6 +299,97 @@ export class DungeonScene extends Phaser.Scene {
     } catch (err) {
       console.error(`[MAP] Erreur lors du chargement de l'image-map "${mapName}" :`, err);
     }
+  }
+
+  // ── Grille unifiée ──────────────────────────────────────────────────────
+  // Dessine une grille tous les TILE_SIZE pixels par-dessus la carte active.
+  // Depth 5 : au-dessus de la carte (0–2), sous les tokens (10).
+  private _drawGrid(widthPx: number, heightPx: number): void {
+    const g = this.add.graphics();
+    this.gridGraphics = g;
+    g.lineStyle(1, 0x444466, 0.25);
+    for (let x = 0; x <= widthPx; x += TILE_SIZE) {
+      g.moveTo(x, 0);
+      g.lineTo(x, heightPx);
+    }
+    for (let y = 0; y <= heightPx; y += TILE_SIZE) {
+      g.moveTo(0,       y);
+      g.lineTo(widthPx, y);
+    }
+    g.strokePath();
+    g.setDepth(5);
+  }
+
+  // Active ou masque la grille — appelé par le toggle GMPanel
+  public setGridVisible(visible: boolean): void {
+    this.gridGraphics?.setVisible(visible);
+  }
+
+  // ── Outil de mesure ─────────────────────────────────────────────────────
+  // Redessine la ligne de mesure et met à jour le label flottant.
+  private _updateMeasure(endTileX: number, endTileY: number): void {
+    if (!this.measureStart || !this.measureGraphics || !this.measureLabel) return;
+
+    const startX = this.measureStart.tileX * TILE_SIZE + TILE_SIZE / 2;
+    const startY = this.measureStart.tileY * TILE_SIZE + TILE_SIZE / 2;
+    const endX   = endTileX * TILE_SIZE + TILE_SIZE / 2;
+    const endY   = endTileY * TILE_SIZE + TILE_SIZE / 2;
+
+    // Distance Chebyshev (diagonale = 1 case, standard VTT)
+    const dX = Math.abs(endTileX - this.measureStart.tileX);
+    const dY = Math.abs(endTileY - this.measureStart.tileY);
+    const distCases = Math.max(dX, dY);
+    const distMetres = (distCases * this.tileScale).toFixed(1);
+
+    // Redessiner la ligne avec cercles aux extrémités
+    this.measureGraphics.clear();
+    this.measureGraphics.lineStyle(2, 0xffff00, 0.85);
+    this.measureGraphics.beginPath();
+    this.measureGraphics.moveTo(startX, startY);
+    this.measureGraphics.lineTo(endX, endY);
+    this.measureGraphics.strokePath();
+    this.measureGraphics.fillStyle(0xffff00, 0.85);
+    this.measureGraphics.fillCircle(startX, startY, 4);
+    this.measureGraphics.fillCircle(endX, endY, 4);
+    this.measureGraphics.setVisible(true);
+
+    // Mettre à jour le label au milieu du segment
+    this.measureLabel.setText(`${distCases} cases — ${distMetres} m`);
+    this.measureLabel.setPosition((startX + endX) / 2, (startY + endY) / 2);
+    this.measureLabel.setVisible(true);
+  }
+
+  // Efface l'outil de mesure (relâchement du bouton ou de Shift)
+  private _stopMeasure(): void {
+    this.isMeasuring = false;
+    this.measureStart = null;
+    this.measureGraphics?.clear();
+    this.measureGraphics?.setVisible(false);
+    this.measureLabel?.setVisible(false);
+  }
+
+  // ── Cercle de portée (bonus) ─────────────────────────────────────────────
+  // Retourne le premier token trouvé à la case (tileX, tileY), ou null.
+  private _getTokenAtTile(tileX: number, tileY: number): Token | null {
+    let found: Token | null = null;
+    network.room.state.tokens.forEach((token: Token) => {
+      if (token.tileX === tileX && token.tileY === tileY) found = token;
+    });
+    return found;
+  }
+
+  // Affiche le cercle de portée (rayon 6 cases) autour d'une case.
+  private _showRangeCircle(tileX: number, tileY: number): void {
+    if (!this.rangeCircle) return;
+    const centerX  = tileX * TILE_SIZE + TILE_SIZE / 2;
+    const centerY  = tileY * TILE_SIZE + TILE_SIZE / 2;
+    const radiusPx = RANGE_CIRCLE_TILES * TILE_SIZE;
+    this.rangeCircle.clear();
+    this.rangeCircle.fillStyle(0x00aaff, 0.2);
+    this.rangeCircle.fillCircle(centerX, centerY, radiusPx);
+    this.rangeCircle.lineStyle(1.5, 0x00aaff, 0.7);
+    this.rangeCircle.strokeCircle(centerX, centerY, radiusPx);
+    this.rangeCircle.setVisible(true);
   }
 
   // ── Synchronisation Colyseus → Phaser ───────────────────────────────────
@@ -351,7 +478,7 @@ export class DungeonScene extends Phaser.Scene {
 
   // ── Gestion des inputs ───────────────────────────────────────────────────
   private _setupInput(): void {
-    // ── Clic gauche → déplacer le token du joueur courant ──────────────────
+    // ── Clic gauche → mesure / cercle portée / déplacement ─────────────────
     this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
       if (pointer.leftButtonDown()) {
         // Ignorer les clics qui proviennent du GMPanel (évite un moveToken parasite)
@@ -362,7 +489,23 @@ export class DungeonScene extends Phaser.Scene {
         const tileX = Math.floor(pointer.worldX / TILE_SIZE);
         const tileY = Math.floor(pointer.worldY / TILE_SIZE);
 
-        // Envoie la commande de déplacement pour le token du joueur courant
+        // Shift + clic gauche → démarrer la mesure (ne déplace pas le token)
+        if (pointer.event.shiftKey) {
+          this.isMeasuring = true;
+          this.measureStart = { tileX, tileY };
+          return;
+        }
+
+        // Clic sur un token existant → afficher le cercle de portée
+        const clickedToken = this._getTokenAtTile(tileX, tileY);
+        if (clickedToken) {
+          this._showRangeCircle(clickedToken.tileX, clickedToken.tileY);
+          return;
+        }
+
+        // Clic sur case vide → déplacer le token + effacer le cercle de portée
+        this.rangeCircle?.setVisible(false);
+        this.rangeCircle?.clear();
         network.moveToken(network.room.sessionId, tileX, tileY);
       }
 
@@ -376,21 +519,35 @@ export class DungeonScene extends Phaser.Scene {
       }
     });
 
-    // ── Déplacement de la souris → scroll caméra si clic droit enfoncé ────
+    // ── Déplacement de la souris ──────────────────────────────────────────
     this.input.on("pointermove", (pointer: Phaser.Input.Pointer) => {
-      if (!this.isDragging) return;
+      // Mise à jour de la ligne de mesure si l'outil est actif
+      if (this.isMeasuring && this.measureStart) {
+        const endTileX = Math.floor(pointer.worldX / TILE_SIZE);
+        const endTileY = Math.floor(pointer.worldY / TILE_SIZE);
+        this._updateMeasure(endTileX, endTileY);
+      }
 
+      // Scroll caméra si clic droit enfoncé
+      if (!this.isDragging) return;
       const dx = (pointer.x - this.dragStartX) / this.cameras.main.zoom;
       const dy = (pointer.y - this.dragStartY) / this.cameras.main.zoom;
-
       this.cameras.main.setScroll(this.camStartX - dx, this.camStartY - dy);
     });
 
-    // ── Relâchement du clic droit → fin du scroll ──────────────────────────
+    // ── Relâchement du clic → fin du scroll / de la mesure ─────────────────
     this.input.on("pointerup", (pointer: Phaser.Input.Pointer) => {
       if (pointer.rightButtonReleased()) {
         this.isDragging = false;
       }
+      if (pointer.leftButtonReleased() && this.isMeasuring) {
+        this._stopMeasure();
+      }
+    });
+
+    // ── Relâchement de Shift → fin de la mesure ────────────────────────────
+    this.input.keyboard?.on("keyup-SHIFT", () => {
+      if (this.isMeasuring) this._stopMeasure();
     });
 
     // ── Molette → zoom (clampé entre 0.3 et 2.5) ──────────────────────────

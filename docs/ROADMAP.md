@@ -21,7 +21,7 @@
 | **1c** | Éditeur de map par images drag & drop (GM only) | ✅ Terminé |
 | **2a** | Serveur Colyseus — état & rôles avancés | ✅ Terminé |
 | **2b** | Frontend Phaser 3 — tokens, caméra, UI GM | ✅ Terminé |
-| **3** | Combat & Distances | ⬜ À faire |
+| **3** | Combat & Distances | 🔶 Distances ✅ (combat hors-ligne) |
 | **4** | Fog of War (Ligne de vue réelle) | ⬜ À faire |
 | **5** | Personnalisation joueurs | ⬜ À faire |
 | **6** | Packaging & Distribution | 🔶 En cours |

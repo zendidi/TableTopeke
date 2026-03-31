@@ -11,6 +11,32 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/lang/fr/).
 
 ---
 
+## [0.6.0] — Phase 3 partielle : Distances & Grille de mesure
+
+### Ajouté
+- `client/src/scenes/DungeonScene.ts` :
+  - `gridGraphics` — grille unifiée (Tiled + image-map) à depth 5, couleur `0x444466` alpha 0.25
+  - `_drawGrid(widthPx, heightPx)` — méthode privée dessinant la grille tous les `TILE_SIZE` pixels
+  - `setGridVisible(bool)` — méthode publique appelée par le toggle GMPanel
+  - `tileScale` local synchronisé depuis `state.tileScale` via `state.listen("tileScale", ...)`
+  - Outil de mesure Shift+clic-glisser : ligne jaune + label `N cases — X.X m` (distance Chebyshev)
+  - Cercle de portée (bonus) : clic sur un token → cercle bleu `0x00aaff` rayon 6 cases
+- `client/src/ui/GMPanel.ts` :
+  - Checkbox "Afficher la grille" (pré-cochée) dans la section Fog of War
+  - Input "1 case = X m" initialisé avec la valeur courante de `state.tileScale`
+- `server/src/schema/DungeonState.ts` :
+  - `tileScale` : type changé de `"number"` en `"float32"`
+
+### Modifié
+- `client/src/scenes/DungeonScene.ts` :
+  - `_loadMap()` détruit `gridGraphics` avant de charger la nouvelle map
+  - `_loadTiledMap()` appelle `_drawGrid()` en fin de chargement
+  - `_loadImageMap()` utilise `_drawGrid()` à la place du dessin inline (suppression de `currentImageGrid`)
+  - `_setupInput()` : Shift+clic gauche démarre la mesure au lieu de déplacer le token ; clic sur token affiche le cercle de portée ; clic sur case vide déplace le token et efface le cercle
+- `docs/ROADMAP.md` : Phase 3 marquée 🔶 Distances ✅
+
+---
+
 ## [0.5.0] — Phase 2 : Serveur Colyseus — état & rôles avancés
 
 ### Ajouté

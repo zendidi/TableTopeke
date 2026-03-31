@@ -18,6 +18,8 @@ export class GMPanel {
     private onUpdateHp: (tokenId: string, hp: number) => void,
     private players: MapSchema<Player>,
     private tokens: MapSchema<Token>,
+    private onSetGridVisible: (visible: boolean) => void,
+    private initialTileScale: number,
   ) {
     this.container = document.createElement("div");
     this.container.id = "gm-panel";
@@ -296,7 +298,7 @@ export class GMPanel {
     return wrapper;
   }
 
-  // Section activation Fog of War et LOS
+  // Section activation Fog of War et LOS, et toggle grille
   private _buildFogSection(): HTMLElement {
     const wrapper = document.createElement("div");
 
@@ -307,6 +309,10 @@ export class GMPanel {
     wrapper.appendChild(this._buildCheckbox("LOS (Ligne de vue)", "gm-fog-los", (checked) => {
       this.onToggleFog(undefined, checked);
     }));
+
+    wrapper.appendChild(this._buildCheckbox("Afficher la grille", "gm-grid-visible", (checked) => {
+      this.onSetGridVisible(checked);
+    }, true));
 
     return wrapper;
   }
@@ -325,7 +331,7 @@ export class GMPanel {
     input.type = "number";
     input.min = "0.1";
     input.step = "0.5";
-    input.value = "1.5";
+    input.value = String(this.initialTileScale);
     Object.assign(input.style, {
       width:       "55px",
       background:  "#1a1a2e",
@@ -354,14 +360,15 @@ export class GMPanel {
     return wrapper;
   }
 
-  // Crée une checkbox avec label et callback
-  private _buildCheckbox(labelText: string, id: string, onChange: (checked: boolean) => void): HTMLLabelElement {
+  // Crée une checkbox avec label et callback ; checkedByDefault permet de pré-cocher
+  private _buildCheckbox(labelText: string, id: string, onChange: (checked: boolean) => void, checkedByDefault = false): HTMLLabelElement {
     const label = document.createElement("label");
     Object.assign(label.style, { display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px", cursor: "pointer" });
 
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
     checkbox.id = id;
+    checkbox.checked = checkedByDefault;
     checkbox.addEventListener("change", () => onChange(checkbox.checked));
 
     const span = document.createElement("span");
