@@ -2,18 +2,22 @@
   "name": "tabletopeke-client",
   "version": "0.1.0",
   "scripts": {
-    "dev":                    "vite",
-    "build":                  "vite build",
-    "preview":                "vite preview",
-    "generate-images-index":  "node ../tools/generate-images-index.js"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "generate-images-index": "node ../tools/generate-images-index.js",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "colyseus.js": "^0.15.0",
-    "phaser":      "^3.80.0"
+    "phaser": "^3.80.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
-    "typescript":  "^5.0.0",
-    "vite":        "^5.0.0"
+    "jsdom": "^29.0.1",
+    "typescript": "^5.0.0",
+    "vite": "^5.0.0",
+    "vitest": "^1.0.0"
   }
 }
