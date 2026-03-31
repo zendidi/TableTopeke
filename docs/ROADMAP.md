@@ -19,11 +19,12 @@
 | **1a** | Tileset 0x72 + rendu carte Tiled + map de test | ✅ Terminé |
 | **1b** | Sélecteur de map GM + sync Colyseus `LOAD_MAP` | ✅ Terminé |
 | **1c** | Éditeur de map par images drag & drop (GM only) | ✅ Terminé |
-| **2** | Serveur Colyseus — état & rôles avancés | ✅ Terminé |
+| **2a** | Serveur Colyseus — état & rôles avancés | ✅ Terminé |
+| **2b** | Frontend Phaser 3 — tokens, caméra, UI GM | ✅ Terminé |
 | **3** | Combat & Distances | ⬜ À faire |
 | **4** | Fog of War (Ligne de vue réelle) | ⬜ À faire |
 | **5** | Personnalisation joueurs | ⬜ À faire |
-| **6** | Packaging & Distribution | ⬜ À faire |
+| **6** | Packaging & Distribution | 🔶 En cours |
 | **7** | Création du Donjon | ⬜ À faire |
 
 ---
@@ -143,7 +144,7 @@
 
 ---
 
-## Phase 2 — Serveur Colyseus ✅ Terminé
+## Phase 2a — Serveur Colyseus ✅ Terminé
 
 ### Schéma d'état
 
@@ -173,33 +174,33 @@
 
 ---
 
-## Phase 2 — Frontend Phaser 3 ⬜ À faire
+## Phase 2b — Frontend Phaser 3 ✅ Terminé
 
 ### Chargement de la carte
 
-- [ ] Import du tileset LPC Dungeon
-- [ ] Chargement de la carte Tiled JSON (`this.make.tilemap`)
-- [ ] Rendu des layers : fond, murs, décoration, collisions
+- [x] Tileset 0x72 Dungeon — tuiles 16×16 px (intégré en Phase 1a)
+- [x] Chargement de la carte Tiled JSON (`this.make.tilemap`)
+- [x] Rendu des layers : `sol` (fond), `murs` (collisions)
 
 ### Tokens
 
-- [ ] Affichage des tokens joueurs (sprite + nom)
-- [ ] Synchronisation des positions (interpolation douce entre les ticks)
-- [ ] Sélection et déplacement par clic (selon les droits du rôle)
+- [x] Affichage des tokens joueurs (cercle coloré + nom + HP)
+- [x] Synchronisation des positions (interpolation linéaire 150ms entre les ticks)
+- [x] Sélection et déplacement par clic gauche (selon les droits du rôle)
 
 ### Caméra & Interface
 
-- [ ] Scroll de caméra (clic droit + glisser)
-- [ ] Zoom (molette souris)
-- [ ] Interface GM : panneau latéral (liste joueurs, HP, actions)
-- [ ] Indicateur de tour actif / combattant courant
+- [x] Scroll de caméra (clic droit + glisser)
+- [x] Zoom (molette souris, clampé entre 0.3 et 2.5)
+- [x] Interface GM : panneau latéral HTML overlay (`GMPanel`) — joueurs, HP, maps, combat, fog, échelle
+- [ ] Indicateur de tour actif / combattant courant (état `combatActive`/`currentTurnId` synchronisé, affichage visuel sur le canvas non implémenté)
 
 ### ✅ Critères de validation
 
-- La carte s'affiche correctement dans le navigateur
-- Les tokens des joueurs sont visibles et synchronisés
-- Le déplacement d'un token est visible par tous les clients < 200ms
-- La caméra permet de naviguer sur toute la carte
+- La carte s'affiche correctement dans le navigateur ✅
+- Les tokens des joueurs sont visibles et synchronisés ✅
+- Le déplacement d'un token est visible par tous les clients < 200ms ✅
+- La caméra permet de naviguer sur toute la carte ✅
 
 ---
 
@@ -282,8 +283,8 @@
 
 ### Option A — Lancement local (prioritaire)
 
-- [ ] Script `start.bat` (Windows)
-- [ ] Script `start.sh` (Mac/Linux)
+- [x] Script `start.bat` (Windows)
+- [x] Script `start.sh` (Mac/Linux)
 - [ ] Build frontend statique avec Vite
 - [ ] README d'installation simplifié
 - [ ] Test 5 connexions simultanées
