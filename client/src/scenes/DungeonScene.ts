@@ -2,6 +2,7 @@ import { network } from "../network/ColyseusClient";
 import type { Token } from "../../../server/src/schema/DungeonState";
 import { GMPanel } from "../ui/GMPanel";
 import { DebugPanel } from "../ui/DebugPanel";
+import { DebugOverlay } from "../ui/DebugOverlay";
 import type { ImageMapData, MapIndex, MapIndexEntry } from "../types/MapTypes";
 
 // Taille d'une case en pixels — correspond aux tuiles 16×16 du tileset 0x72 Dungeon
@@ -57,6 +58,9 @@ export class DungeonScene extends Phaser.Scene {
   // Panneau de debug (HTML overlay) — toggle avec la touche `
   private debugPanel: DebugPanel | null = null;
 
+  // Overlay de debug léger (HTML overlay) — toggle avec la touche F1, visible pour tous
+  private debugOverlay: DebugOverlay | null = null;
+
   // État du scroll caméra via clic droit
   private isDragging: boolean = false;
   private dragStartX: number  = 0;
@@ -100,8 +104,10 @@ export class DungeonScene extends Phaser.Scene {
     this.tokenContainer.setDepth(10);
 
     // ── Gestion des erreurs de chargement et cycle de vie de la scène ────────
-    this.load.on("loaderror", (file: Phaser.Loader.File) =>
-      console.error("[LOAD ERROR]", file.key, file.src));
+    this.load.on("loaderror", (file: Phaser.Loader.File) => {
+      console.error("[LOAD ERROR]", file.key, file.src);
+      DebugOverlay.setLastError(`[LOAD ERROR] ${file.key}`);
+    });
     this.events.on("destroy", () =>
       console.log("[SCENE] DungeonScene destroyed"));
 
@@ -177,6 +183,16 @@ export class DungeonScene extends Phaser.Scene {
     // ── Panneau de debug (overlay HTML) — toggle avec la touche ` ────────────
     this.debugPanel = new DebugPanel(network.room, network.isGM);
 
+    // ── Overlay de debug léger (overlay HTML) — toggle avec F1 ───────────────
+    // Visible pour tous les joueurs (pas seulement le GM)
+    this.debugOverlay = new DebugOverlay(this, () => ({
+      zoom:        this.cameras.main.zoom,
+      mapName:     network.room.state.currentMap ?? DEFAULT_MAP_NAME,
+      tokenCount:  network.room.state.tokens.size,
+      playerCount: network.room.state.players.size,
+      sessionId:   network.room.sessionId,
+    }));
+
     // ── Gestion des inputs ──────────────────────────────────────────────────
     this._setupInput();
   }
@@ -219,6 +235,7 @@ export class DungeonScene extends Phaser.Scene {
     const tileset = map.addTilesetImage("0x72_dungeon", "0x72_dungeon");
     if (!tileset) {
       console.error(`[MAP] Tileset introuvable pour la map "${mapName}". Vérifiez client/public/tilesets/0x72_dungeon.png.`);
+      DebugOverlay.setLastError(`[MAP ERROR] Tileset introuvable: ${mapName}`);
       return;
     }
 
@@ -255,12 +272,14 @@ export class DungeonScene extends Phaser.Scene {
       const response = await fetch(`maps/${mapName}.json`);
       if (!response.ok) {
         console.error(`[MAP] Impossible de charger l'image-map "${mapName}" (HTTP ${response.status}).`);
+        DebugOverlay.setLastError(`[MAP ERROR] HTTP ${response.status}: ${mapName}`);
         return;
       }
       const data = await response.json() as ImageMapData;
 
       if (data.type !== "image-map") {
         console.error(`[MAP] Le fichier "${mapName}.json" n'est pas une image-map valide.`);
+        DebugOverlay.setLastError(`[MAP ERROR] Format invalide: ${mapName}`);
         return;
       }
 
@@ -310,6 +329,7 @@ export class DungeonScene extends Phaser.Scene {
       console.log(`[MAP] Image-map "${mapName}" chargée (${data.images.length} images, ${data.widthInTiles}×${data.heightInTiles} cases).`);
     } catch (err) {
       console.error(`[MAP] Erreur lors du chargement de l'image-map "${mapName}" :`, err);
+      DebugOverlay.setLastError(`[MAP ERROR] ${mapName}`);
     }
   }
 
@@ -563,6 +583,12 @@ export class DungeonScene extends Phaser.Scene {
       if (this.isMeasuring) this._stopMeasure();
     });
 
+    // ── F1 → toggle de l'overlay de debug ─────────────────────────────────
+    this.input.keyboard?.on("keydown-F1", (e: KeyboardEvent) => {
+      e.preventDefault();
+      this.debugOverlay?.toggle();
+    });
+
     // ── Molette → zoom (clampé entre 0.3 et 2.5) ──────────────────────────
     // Équivalent d'un Camera.orthographicSize Unity
     this.input.on("wheel", (_pointer: Phaser.Input.Pointer, _gameObjects: unknown, _dx: number, dy: number) => {
@@ -580,5 +606,7 @@ export class DungeonScene extends Phaser.Scene {
     this.gmPanel = null;
     this.debugPanel?.destroy();
     this.debugPanel = null;
+    this.debugOverlay?.destroy();
+    this.debugOverlay = null;
   }
 }
