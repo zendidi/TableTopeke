@@ -347,11 +347,13 @@ export class DungeonScene extends Phaser.Scene {
     // ── Clic gauche → déplacer le token du joueur courant ──────────────────
     this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
       if (pointer.leftButtonDown()) {
-        const worldX = this.cameras.main.scrollX + pointer.x / this.cameras.main.zoom;
-        const worldY = this.cameras.main.scrollY + pointer.y / this.cameras.main.zoom;
+        // Ignorer les clics qui proviennent du GMPanel (évite un moveToken parasite)
+        if (pointer.event.target instanceof HTMLElement && pointer.event.target.closest("#gm-panel")) return;
 
-        const tileX = Math.floor(worldX / TILE_SIZE);
-        const tileY = Math.floor(worldY / TILE_SIZE);
+        // pointer.worldX / pointer.worldY tient compte du scale CSS (Phaser.Scale.FIT),
+        // du zoom caméra et du scroll — contrairement à pointer.x / pointer.y.
+        const tileX = Math.floor(pointer.worldX / TILE_SIZE);
+        const tileY = Math.floor(pointer.worldY / TILE_SIZE);
 
         // Envoie la commande de déplacement pour le token du joueur courant
         network.moveToken(network.room.sessionId, tileX, tileY);

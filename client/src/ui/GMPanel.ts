@@ -42,6 +42,11 @@ export class GMPanel {
 
     this._build();
     document.body.appendChild(this.container);
+
+    // Bloquer la propagation des événements souris vers le canvas Phaser
+    // pour éviter qu'un clic sur un bouton du panel déclenche aussi un moveToken
+    this.container.addEventListener("mousedown",   (e) => e.stopPropagation());
+    this.container.addEventListener("pointerdown", (e) => e.stopPropagation());
   }
 
   // Construit le HTML interne du panneau avec toutes les sections
@@ -249,8 +254,14 @@ export class GMPanel {
     btnEditor.textContent = "🗺️ Éditeur de map";
     Object.assign(btnEditor.style, { ...this._btnStyle("#4a2d8b"), marginTop: "6px", width: "100%" });
     btnEditor.addEventListener("click", () => {
-      // Accéder à l'instance Phaser exposée dans main.ts via window.__phaserGame
-      window.__phaserGame?.scene.start("MapEditorScene");
+      const game = window.__phaserGame;
+      if (!game) {
+        console.error("[GMPanel] window.__phaserGame est undefined — impossible de lancer MapEditorScene");
+        return;
+      }
+      console.log("[GMPanel] Lancement de MapEditorScene...");
+      game.scene.stop("DungeonScene");
+      game.scene.start("MapEditorScene");
     });
     wrapper.appendChild(btnEditor);
 
