@@ -37,8 +37,9 @@ export class DungeonRoom extends Room<DungeonState> {
   onAuth(_client: Client, options: JoinOptions): AuthData {
     const isGM = options.gmPassword === GM_PASSWORD;
     if (options.gmPassword !== undefined && !isGM) {
-      console.warn(`[DungeonRoom] Tentative GM refusée — mauvais mot de passe`);
+      console.warn(`[AUTH] Tentative GM refusée — mauvais mot de passe`);
     }
+    console.log(`[AUTH] isGM: ${isGM}`);
     return { isGM };
   }
 
@@ -48,6 +49,7 @@ export class DungeonRoom extends Room<DungeonState> {
     // ── MOVE_TOKEN ──────────────────────────────────────────────────────────
     // Le propriétaire du token ou le GM peut le déplacer
     this.onMessage("MOVE_TOKEN", (client, data: { tokenId: string; tileX: number; tileY: number }) => {
+      console.log(`[MSG] MOVE_TOKEN sessionId=${client.sessionId} payload=${JSON.stringify(data)}`);
       const token = this.state.tokens.get(data.tokenId);
       if (!token) return;
 
@@ -62,6 +64,7 @@ export class DungeonRoom extends Room<DungeonState> {
     // ── UPDATE_HP ────────────────────────────────────────────────────────────
     // Seul le GM peut modifier les HP (équivalent d'un ServerRpc avec autorité serveur)
     this.onMessage("UPDATE_HP", (client, data: { tokenId: string; hp: number }) => {
+      console.log(`[MSG] UPDATE_HP sessionId=${client.sessionId} payload=${JSON.stringify(data)}`);
       if (this.state.gmSessionId !== client.sessionId) return;
 
       const token = this.state.tokens.get(data.tokenId);
@@ -73,6 +76,7 @@ export class DungeonRoom extends Room<DungeonState> {
     // ── TOGGLE_FOG ───────────────────────────────────────────────────────────
     // GM seulement — active/désactive le brouillard de guerre et le LOS
     this.onMessage("TOGGLE_FOG", (client, data: { fogEnabled?: boolean; losEnabled?: boolean }) => {
+      console.log(`[MSG] TOGGLE_FOG sessionId=${client.sessionId} payload=${JSON.stringify(data)}`);
       if (this.state.gmSessionId !== client.sessionId) return;
 
       if (data.fogEnabled !== undefined) this.state.fogEnabled = data.fogEnabled;
@@ -82,21 +86,25 @@ export class DungeonRoom extends Room<DungeonState> {
     // ── COMBAT_ACTION ─────────────────────────────────────────────────────────
     // GM seulement — contrôle du mode combat au tour par tour
     this.onMessage("COMBAT_ACTION", (client, data: { action: "start" | "end" | "next" }) => {
+      console.log(`[MSG] COMBAT_ACTION sessionId=${client.sessionId} payload=${JSON.stringify(data)}`);
       if (this.state.gmSessionId !== client.sessionId) return;
 
       switch (data.action) {
         case "start":
           this.state.combatActive = true;
           this.state.currentTurn = 1;
+          console.log(`[STATE] currentTurn → ${this.state.currentTurn}`);
           break;
         case "end":
           this.state.combatActive = false;
           this.state.currentTurn = 0;
           this.state.currentTurnId = "";
+          console.log(`[STATE] currentTurn → ${this.state.currentTurn}`);
           break;
         case "next":
           if (!this.state.combatActive) return;
           this.state.currentTurn += 1;
+          console.log(`[STATE] currentTurn → ${this.state.currentTurn}`);
           // La logique d'ordre d'initiative peut être étendue ici (Phase 3)
           break;
       }
@@ -105,37 +113,39 @@ export class DungeonRoom extends Room<DungeonState> {
     // ── SET_TILE_SCALE ───────────────────────────────────────────────────────
     // GM seulement — définit la taille réelle d'une case (en mètres)
     this.onMessage("SET_TILE_SCALE", (client, data: { scale: number }) => {
+      console.log(`[MSG] SET_TILE_SCALE sessionId=${client.sessionId} payload=${JSON.stringify(data)}`);
       if (this.state.gmSessionId !== client.sessionId) return;
       if (typeof data.scale !== "number" || data.scale <= 0) return;
 
       this.state.tileScale = data.scale;
+      console.log(`[STATE] tileScale → ${this.state.tileScale}`);
     });
 
     // ── LOAD_MAP ─────────────────────────────────────────────────────────────
     // GM seulement — change la map active et repositionne tous les tokens
     type LoadMapMsg = { mapName: string };
     this.onMessage<LoadMapMsg>("LOAD_MAP", (client, msg) => {
+      console.log(`[MSG] LOAD_MAP sessionId=${client.sessionId} payload=${JSON.stringify(msg)}`);
       // Vérification du rôle GM
       if (client.sessionId !== this.state.gmSessionId) return;
       if (!msg.mapName || typeof msg.mapName !== "string") return;
 
       // Mettre à jour l'état partagé → Colyseus broadcast automatiquement
       this.state.currentMap = msg.mapName;
+      console.log(`[STATE] currentMap → ${this.state.currentMap}`);
 
       // Repositionner tous les tokens au centre de la nouvelle map
       this.state.tokens.forEach((token) => {
         token.tileX = DEFAULT_TOKEN_SPAWN.x;
         token.tileY = DEFAULT_TOKEN_SPAWN.y;
       });
-
-      console.log(`[MAP] Chargement de la map "${msg.mapName}" par le GM.`);
     });
 
-    console.log(`[DungeonRoom] Salle créée — GM_PASSWORD=${process.env.GM_PASSWORD ? "(custom)" : "(défaut)"}`);
+    console.log(`[ROOM] Salle créée — GM_PASSWORD=${process.env.GM_PASSWORD ? "(custom)" : "(défaut)"}`);
   }
 
   onJoin(client: Client, options: JoinOptions = {}, auth?: AuthData): void {
-    console.log(`[DungeonRoom] Joueur connecté: ${client.sessionId} (name="${options.name ?? "?"}")`);
+    console.log(`[ROOM] Joueur connecté: ${client.sessionId} (name="${options.name ?? "?"}")`);
 
     const isGM = auth?.isGM ?? false;
 
@@ -169,12 +179,12 @@ export class DungeonRoom extends Room<DungeonState> {
     // ── Enregistrement du GM ────────────────────────────────────────────────
     if (isGM && this.state.gmSessionId === "") {
       this.state.gmSessionId = client.sessionId;
-      console.log(`[DungeonRoom] GM enregistré: ${client.sessionId}`);
+      console.log(`[ROOM] GM enregistré: ${client.sessionId}`);
     }
   }
 
   async onLeave(client: Client, consented: boolean): Promise<void> {
-    console.log(`[DungeonRoom] Joueur déconnecté: ${client.sessionId} (consented=${consented})`);
+    console.log(`[ROOM] Joueur déconnecté: ${client.sessionId} (consented=${consented})`);
 
     // Marquer le joueur comme déconnecté temporairement
     const player = this.state.players.get(client.sessionId);
@@ -191,19 +201,19 @@ export class DungeonRoom extends Room<DungeonState> {
         const reconnectedPlayer = this.state.players.get(client.sessionId);
         if (reconnectedPlayer) {
           reconnectedPlayer.isConnected = true;
-          console.log(`[DungeonRoom] Joueur reconnecté: ${client.sessionId}`);
+          console.log(`[ROOM] Joueur reconnecté: ${client.sessionId}`);
         }
         return;
       } catch {
         // Délai de reconnexion expiré — procéder à la suppression
-        console.log(`[DungeonRoom] Reconnexion expirée pour: ${client.sessionId}`);
+        console.error(`[ERROR] Reconnexion expirée pour: ${client.sessionId}`);
       }
     }
 
     // Si le GM se déconnecte définitivement, libère le slot GM EN PREMIER
     if (this.state.gmSessionId === client.sessionId) {
       this.state.gmSessionId = "";
-      console.log("[DungeonRoom] Le GM s'est déconnecté — slot GM libéré");
+      console.log("[ROOM] Le GM s'est déconnecté — slot GM libéré");
     }
 
     // Supprimer le joueur et son token de la map

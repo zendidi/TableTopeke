@@ -2,6 +2,8 @@ import * as Colyseus from "colyseus.js";
 import { DungeonState, Player } from "../../../server/src/schema/DungeonState";
 import type { MapSchema } from "@colyseus/schema";
 
+const DEBUG_NETWORK = true;
+
 // Type pour les options de connexion (issues de player-config.json ou window.__playerConfig)
 interface ConnectOptions {
   name?: string;
@@ -49,6 +51,11 @@ class NetworkManager {
     this.isGM   = mergedOptions.isGM === true;
 
     console.log(`[NetworkManager] Connecté à ${endpoint} — sessionId: ${this.room.sessionId}`);
+
+    this.room.onError((code, message) =>
+      console.error("[ROOM ERROR]", code, message));
+    this.room.onLeave((code) =>
+      console.warn("[ROOM LEAVE] code:", code));
   }
 
   // Référence vers la MapSchema des joueurs connectés (synchronisée par Colyseus)
@@ -59,31 +66,37 @@ class NetworkManager {
   // Déplace un token vers les coordonnées de tuile indiquées
   // Équivalent d'un NetworkTransform Unity
   moveToken(tokenId: string, tileX: number, tileY: number): void {
+    if (DEBUG_NETWORK) console.log("[NET →] MOVE_TOKEN", { tokenId, tileX, tileY });
     this.room.send("MOVE_TOKEN", { tokenId, tileX, tileY });
   }
 
   // Met à jour les HP d'un token (GM seulement côté serveur)
   updateHp(tokenId: string, hp: number): void {
+    if (DEBUG_NETWORK) console.log("[NET →] UPDATE_HP", { tokenId, hp });
     this.room.send("UPDATE_HP", { tokenId, hp });
   }
 
   // Active/désactive le brouillard de guerre ou le Line-of-Sight (GM seulement)
   toggleFog(fogEnabled?: boolean, losEnabled?: boolean): void {
+    if (DEBUG_NETWORK) console.log("[NET →] TOGGLE_FOG", { fogEnabled, losEnabled });
     this.room.send("TOGGLE_FOG", { fogEnabled, losEnabled });
   }
 
   // Contrôle le mode combat (GM seulement)
   combat(action: "start" | "end" | "next"): void {
+    if (DEBUG_NETWORK) console.log("[NET →] COMBAT_ACTION", { action });
     this.room.send("COMBAT_ACTION", { action });
   }
 
   // Modifie l'échelle des cases en mètres (GM seulement)
   setTileScale(scale: number): void {
+    if (DEBUG_NETWORK) console.log("[NET →] SET_TILE_SCALE", { scale });
     this.room.send("SET_TILE_SCALE", { scale });
   }
 
   // Demande au serveur de changer la map active (GM seulement)
   loadMap(mapName: string): void {
+    if (DEBUG_NETWORK) console.log("[NET →] LOAD_MAP", { mapName });
     this.room.send("LOAD_MAP", { mapName });
   }
 }

@@ -99,6 +99,12 @@ export class DungeonScene extends Phaser.Scene {
     this.tokenContainer = this.add.container(0, 0);
     this.tokenContainer.setDepth(10);
 
+    // ── Gestion des erreurs de chargement et cycle de vie de la scène ────────
+    this.load.on("loaderror", (file: Phaser.Loader.File) =>
+      console.error("[LOAD ERROR]", file.key, file.src));
+    this.events.on("destroy", () =>
+      console.log("[SCENE] DungeonScene destroyed"));
+
     // ── Zoom initial ─────────────────────────────────────────────────────────
     this.cameras.main.setZoom(INITIAL_ZOOM);
 
