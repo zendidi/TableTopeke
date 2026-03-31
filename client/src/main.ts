@@ -9,6 +9,8 @@ import { MapEditorScene } from "./scenes/MapEditorScene";
 declare global {
   interface Window {
     __phaserGame: Phaser.Game;
+    // Dernier message d'erreur — exposé par DebugOverlay.setLastError()
+    __lastError?: string;
     // Configuration joueur optionnelle — peut être définie par une page hôte
     // avant le chargement de l'application (priorité sur player-config.json)
     __playerConfig?: {

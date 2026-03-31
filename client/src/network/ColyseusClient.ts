@@ -1,6 +1,7 @@
 import * as Colyseus from "colyseus.js";
 import { DungeonState, Player } from "../../../server/src/schema/DungeonState";
 import type { MapSchema } from "@colyseus/schema";
+import { DebugOverlay } from "../ui/DebugOverlay";
 
 const DEBUG_NETWORK = true;
 
@@ -52,8 +53,10 @@ class NetworkManager {
 
     console.log(`[NetworkManager] Connecté à ${endpoint} — sessionId: ${this.room.sessionId}`);
 
-    this.room.onError((code, message) =>
-      console.error("[ROOM ERROR]", code, message));
+    this.room.onError((code, message) => {
+      console.error("[ROOM ERROR]", code, message);
+      DebugOverlay.setLastError(`[ROOM ERROR] ${String(message ?? code)}`);
+    });
     this.room.onLeave((code) =>
       console.warn("[ROOM LEAVE] code:", code));
   }
