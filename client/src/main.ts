@@ -40,3 +40,8 @@ const config: Phaser.Types.Core.GameConfig = {
 
 // Exposer l'instance Phaser pour permettre aux overlays HTML (GMPanel, etc.) de changer de scène
 window.__phaserGame = new Phaser.Game(config);
+
+window.addEventListener("error", (e) =>
+  console.error("[WINDOW ERROR]", e.message, `${e.filename}:${e.lineno}`));
+window.addEventListener("unhandledrejection", (e) =>
+  console.error("[PROMISE REJECTED]", e.reason));

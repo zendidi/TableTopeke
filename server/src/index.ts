@@ -5,6 +5,11 @@ import { Server } from "colyseus";
 import { monitor } from "@colyseus/monitor";
 import { DungeonRoom } from "./rooms/DungeonRoom";
 
+process.on("unhandledRejection", (reason) =>
+  console.error("[FATAL] UnhandledRejection:", reason));
+process.on("uncaughtException", (err) =>
+  console.error("[FATAL] UncaughtException:", err));
+
 const PORT = Number(process.env.PORT) || 2567;
 const app  = express();
 
