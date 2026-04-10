@@ -2,11 +2,17 @@
   "_comment": "Ajouter ici chaque map image-map (sans extension .json) pour qu'elle apparaisse dans le sélecteur GM. Utilisez tools/generate-images-index.js pour régénérer images/index.json après avoir ajouté des PNG.",
   "maps": [
     {
+      "id": "grande-salle",
+      "label": "Grande Salle",
+      "type": "tiled",
+      "description": "Map de test Phase 1a — 40×40 cases, tileset 0x72 Dungeon"
+    },
+    {
       "id": "salle-images",
       "label": "Salle (Images)",
       "type": "image-map",
       "description": "Map de démonstration composée de PNG — système image-map"
     }
   ],
-  "defaultMap": "salle-images"
+  "defaultMap": "grande-salle"
 }

@@ -13,7 +13,7 @@ const TILE_SIZE = 16;
 // (équivalent de Camera.orthographicSize Unity)
 const INITIAL_ZOOM = 2.5;
 
-// Map par défaut utilisée si l'index est vide ou l'état Colyseus non initialisé
+// Map par défaut — doit correspondre à defaultMap dans maps/index.json
 const DEFAULT_MAP_NAME = "grande-salle";
 
 // Rayon du cercle de portée en cases (bonus feature 4)
@@ -51,6 +51,10 @@ export class DungeonScene extends Phaser.Scene {
 
   // Cercle de portée affiché sur le token sélectionné (bonus)
   private rangeCircle: Phaser.GameObjects.Graphics | null = null;
+
+  // Token actuellement sélectionné — le GM peut sélectionner n'importe quel token,
+  // un joueur uniquement le sien
+  private selectedTokenId: string | null = null;
 
   // Panneau GM (HTML overlay) — null si le joueur n'est pas GM
   private gmPanel: GMPanel | null = null;
@@ -425,6 +429,22 @@ export class DungeonScene extends Phaser.Scene {
     this.rangeCircle.setVisible(true);
   }
 
+  // Sélectionne un token : retire le visuel de l'ancien, applique un contour blanc sur le nouveau.
+  private _selectToken(tokenId: string): void {
+    // Retirer l'outline de l'ancien token sélectionné
+    if (this.selectedTokenId) {
+      const prev = this.tokenSprites.get(this.selectedTokenId);
+      if (prev) {
+        (prev.getAt(0) as Phaser.GameObjects.Arc).setStrokeStyle(0);
+      }
+    }
+    this.selectedTokenId = tokenId;
+    const container = this.tokenSprites.get(tokenId);
+    if (container) {
+      (container.getAt(0) as Phaser.GameObjects.Arc).setStrokeStyle(2, 0xffffff, 1);
+    }
+  }
+
   // ── Synchronisation Colyseus → Phaser ───────────────────────────────────
   private _syncTokens(): void {
     const { tokens } = network.room.state;
@@ -453,6 +473,10 @@ export class DungeonScene extends Phaser.Scene {
       if (container) {
         container.destroy();
         this.tokenSprites.delete(tokenId);
+      }
+      // Désélectionner si le token supprimé était sélectionné
+      if (this.selectedTokenId === tokenId) {
+        this.selectedTokenId = null;
       }
     });
   }
@@ -529,17 +553,23 @@ export class DungeonScene extends Phaser.Scene {
           return;
         }
 
-        // Clic sur un token existant → afficher le cercle de portée
+        // Clic sur un token existant → sélection + cercle de portée
         const clickedToken = this._getTokenAtTile(tileX, tileY);
         if (clickedToken) {
+          // Le GM peut sélectionner n'importe quel token ; un joueur uniquement le sien
+          const canSelect = network.isGM || clickedToken.ownerId === network.room.sessionId;
+          if (canSelect) {
+            this._selectToken(clickedToken.id);
+          }
           this._showRangeCircle(clickedToken.tileX, clickedToken.tileY);
           return;
         }
 
-        // Clic sur case vide → déplacer le token + effacer le cercle de portée
+        // Clic sur case vide → déplacer le token sélectionné (ou le propre token si aucun)
         this.rangeCircle?.setVisible(false);
         this.rangeCircle?.clear();
-        network.moveToken(network.room.sessionId, tileX, tileY);
+        const tokenToMove = this.selectedTokenId ?? network.room.sessionId;
+        network.moveToken(tokenToMove, tileX, tileY);
       }
 
       // ── Clic droit → début du scroll caméra ────────────────────────────

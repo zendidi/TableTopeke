@@ -17,6 +17,7 @@ export class DebugPanel {
   private lastFrameTime: number = performance.now();
   private frameCount: number = 0;
   private animFrameId: number = 0;
+  private _boundKeydown: (e: KeyboardEvent) => void;
 
   constructor(private room: Room<DungeonState>, private isGM: boolean) {
     this.container = document.createElement("div");
@@ -28,10 +29,9 @@ export class DebugPanel {
     // Masqué par défaut
     this.container.style.display = "none";
 
-    // Touche ` (backtick) pour basculer l'affichage
-    window.addEventListener("keydown", (e) => {
-      if (e.key === "`") this._toggle();
-    });
+    // Référence liée nécessaire pour pouvoir retirer le listener dans destroy()
+    this._boundKeydown = (e: KeyboardEvent) => { if (e.key === "`") this._toggle(); };
+    window.addEventListener("keydown", this._boundKeydown);
 
     this._startFpsLoop();
   }
@@ -123,7 +123,7 @@ export class DebugPanel {
   // Appelé lors du shutdown de la scène pour nettoyer le DOM et arrêter la boucle
   destroy(): void {
     cancelAnimationFrame(this.animFrameId);
-    window.removeEventListener("keydown", this._toggle);
+    window.removeEventListener("keydown", this._boundKeydown);
     this.container.remove();
   }
 }

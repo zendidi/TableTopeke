@@ -252,10 +252,7 @@ export class MapEditorScene extends Phaser.Scene {
     this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
       // Clic gauche — placer ou sélectionner/démarrer drag
       if (pointer.leftButtonDown()) {
-        const { tileX, tileY } = this._snapToGrid(
-          this.cameras.main.scrollX + pointer.x / this.cameras.main.zoom,
-          this.cameras.main.scrollY + pointer.y / this.cameras.main.zoom,
-        );
+        const { tileX, tileY } = this._snapToGrid(pointer.worldX, pointer.worldY);
 
         // Mode placement en attente
         if (this.pendingImageId !== null) {
@@ -266,10 +263,7 @@ export class MapEditorScene extends Phaser.Scene {
         }
 
         // Vérifier si on clique sur une image placée
-        const hitId = this._hitTest(
-          this.cameras.main.scrollX + pointer.x / this.cameras.main.zoom,
-          this.cameras.main.scrollY + pointer.y / this.cameras.main.zoom,
-        );
+        const hitId = this._hitTest(pointer.worldX, pointer.worldY);
         if (hitId !== null) {
           this._selectImage(hitId);
           const placed = this.placedImages.find((p) => p.id === hitId);
@@ -286,9 +280,7 @@ export class MapEditorScene extends Phaser.Scene {
 
       // Clic droit — supprimer l'image sous le curseur, ou démarrer scroll caméra
       if (pointer.rightButtonDown()) {
-        const worldX = this.cameras.main.scrollX + pointer.x / this.cameras.main.zoom;
-        const worldY = this.cameras.main.scrollY + pointer.y / this.cameras.main.zoom;
-        const hitId  = this._hitTest(worldX, worldY);
+        const hitId = this._hitTest(pointer.worldX, pointer.worldY);
 
         if (hitId !== null) {
           this._removePlacedImage(hitId);
@@ -313,10 +305,7 @@ export class MapEditorScene extends Phaser.Scene {
 
       // Drag d'image placée
       if (this.isDraggingImage && this.draggingImageId !== null) {
-        const { tileX, tileY } = this._snapToGrid(
-          this.cameras.main.scrollX + pointer.x / this.cameras.main.zoom,
-          this.cameras.main.scrollY + pointer.y / this.cameras.main.zoom,
-        );
+        const { tileX, tileY } = this._snapToGrid(pointer.worldX, pointer.worldY);
         const newTileX = tileX - this.dragOffsetTileX;
         const newTileY = tileY - this.dragOffsetTileY;
         this._movePlacedImage(this.draggingImageId, newTileX, newTileY);

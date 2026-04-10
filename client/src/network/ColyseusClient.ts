@@ -3,7 +3,7 @@ import { DungeonState, Player } from "../../../server/src/schema/DungeonState";
 import type { MapSchema } from "@colyseus/schema";
 import { DebugOverlay } from "../ui/DebugOverlay";
 
-const DEBUG_NETWORK = true;
+const DEBUG_NETWORK = import.meta.env.DEV;
 
 // Type pour les options de connexion (issues de player-config.json ou window.__playerConfig)
 interface ConnectOptions {
@@ -49,7 +49,10 @@ class NetworkManager {
 
     this.client = new Colyseus.Client(endpoint);
     this.room   = await this.client.joinOrCreate<DungeonState>("dungeon", mergedOptions);
-    this.isGM   = mergedOptions.isGM === true;
+    // isGM est déterminé depuis l'état serveur : si le serveur a enregistré notre sessionId
+    // comme gmSessionId, l'auth a réussi. Cela évite l'état incohérent où le client se croit
+    // GM alors que le serveur a rejeté le mot de passe.
+    this.isGM   = this.room.state.gmSessionId === this.room.sessionId;
 
     console.log(`[NetworkManager] Connecté à ${endpoint} — sessionId: ${this.room.sessionId}`);
 

@@ -46,5 +46,5 @@ export class DungeonState extends Schema {
   @type("float32") tileScale: number = 1.5;
 
   // Nom de la map active (sans extension .json) — synchronisé en temps réel
-  @type("string")  currentMap: string = "salle-images";
+  @type("string")  currentMap: string = "grande-salle";
 }

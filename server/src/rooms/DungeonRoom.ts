@@ -3,7 +3,7 @@ import { DungeonState, Player, Token } from "../schema/DungeonState";
 
 // Mot de passe GM — priorité à la variable d'environnement, fallback sur "admin"
 // TODO (Phase 5) : remplacer par une authentification sécurisée
-const GM_PASSWORD = process.env.GM_PASSWORD ?? "admin";
+const GM_PASSWORD = process.env.GM_PASSWORD ?? "master1234";
 
 // Position de repositionnement des tokens lors d'un changement de map (centre par défaut)
 const DEFAULT_TOKEN_SPAWN = { x: 20, y: 20 };
