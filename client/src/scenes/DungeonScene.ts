@@ -9,6 +9,9 @@ import type { ImageMapData, MapIndex, MapIndexEntry } from "../types/MapTypes";
 // (équivalent du Grid Cell Size dans Unity)
 const TILE_SIZE = 16;
 
+// Hauteur en pixels de la barre HP affichée sous chaque token
+const HP_BAR_H = 3;
+
 // Zoom initial appliqué à la caméra pour que les tuiles 16px soient lisibles à l'écran
 // (équivalent de Camera.orthographicSize Unity)
 const INITIAL_ZOOM = 2.5;
@@ -531,7 +534,7 @@ export class DungeonScene extends Phaser.Scene {
         const hpBar  = container.getAt(2) as Phaser.GameObjects.Graphics;
 
         const BAR_W = TILE_SIZE * 0.8;
-        this._drawHpBar(hpBar, newHp, token.hpMax, BAR_W, 3);
+        this._drawHpBar(hpBar, newHp, token.hpMax, BAR_W, HP_BAR_H);
 
         // Token "hors combat" : grisé à 0 HP, restauré au-dessus de 0
         if (newHp <= 0) {
@@ -583,7 +586,7 @@ export class DungeonScene extends Phaser.Scene {
     // Barre HP colorée en dessous du cercle (index 2) — remplace le label texte HP
     // Posée à -BAR_W/2 en X (origine haut-gauche de la barre) pour centrer sur le token
     const BAR_W = TILE_SIZE * 0.8;
-    const BAR_H = 3;
+    const BAR_H = HP_BAR_H;
     const BAR_Y = TILE_SIZE * 0.55;
 
     const hpBar = this.add.graphics();

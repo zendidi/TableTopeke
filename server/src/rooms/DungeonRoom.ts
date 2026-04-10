@@ -121,8 +121,9 @@ export class DungeonRoom extends Room<DungeonState> {
           this.state.currentTurn += 1;
           const order = this.state.initiativeOrder;
           if (order.length > 0) {
-            const idx     = order.indexOf(this.state.currentTurnId);
-            const nextIdx = (idx + 1) % order.length;
+            const idx = order.indexOf(this.state.currentTurnId);
+            // Si currentTurnId n'est pas dans l'ordre (idx === -1), repartir du début (idx 0)
+            const nextIdx = (Math.max(0, idx) + 1) % order.length;
             this.state.currentTurnId = order[nextIdx];
           }
           console.log(`[STATE] currentTurn → ${this.state.currentTurn}, currentTurnId → ${this.state.currentTurnId}`);

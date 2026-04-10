@@ -323,13 +323,20 @@ export class GMPanel {
     btnStart.textContent = "Démarrer";
     Object.assign(btnStart.style, this._btnStyle("#2d8b2d"));
     btnStart.addEventListener("click", () => {
-      // Lire les scores d'initiative, trier par score décroissant, envoyer au serveur
+      // Lire les scores d'initiative, valider, trier par score décroissant, envoyer au serveur
       const inputs = document.querySelectorAll<HTMLInputElement>(".gm-initiative-input");
       const entries: { tokenId: string; score: number }[] = [];
+      let hasInvalid = false;
       inputs.forEach((inp) => {
         const tokenId = inp.dataset.tokenId;
-        if (tokenId) entries.push({ tokenId, score: parseInt(inp.value, 10) || 0 });
+        const score   = parseInt(inp.value, 10);
+        if (!tokenId) return;
+        if (isNaN(score)) { hasInvalid = true; return; }
+        entries.push({ tokenId, score });
       });
+      if (hasInvalid) {
+        console.warn("[GMPanel] Certains scores d'initiative sont invalides — ignorés");
+      }
       entries.sort((a, b) => b.score - a.score);
       const sortedIds = entries.map((e) => e.tokenId);
       if (sortedIds.length > 0) this.onSetInitiative(sortedIds);
