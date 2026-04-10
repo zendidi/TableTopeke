@@ -17,7 +17,7 @@ const HP_BAR_H = 3;
 const INITIAL_ZOOM = 2.5;
 
 // Map par défaut — doit correspondre à defaultMap dans maps/index.json
-const DEFAULT_MAP_NAME = "grande-salle";
+const DEFAULT_MAP_NAME = "salle-images"; // TILED_DISABLED — était "grande-salle"
 
 // Rayon du cercle de portée en cases (bonus feature 4)
 const RANGE_CIRCLE_TILES = 6;
@@ -34,8 +34,13 @@ export class DungeonScene extends Phaser.Scene {
   private tokenContainer!: Phaser.GameObjects.Container;
 
   // Layers de la carte courante (conservés pour pouvoir les détruire lors d'un changement)
+  /* TILED_DISABLED
   private currentMapLayers: Phaser.Tilemaps.TilemapLayer[] = [];
   private currentTilemap: Phaser.Tilemaps.Tilemap | null = null;
+  TILED_DISABLED */
+  // Remplacement : tableaux vides pour éviter les erreurs de référence dans _loadMap
+  private currentMapLayers: never[] = [];
+  private currentTilemap: null = null;
 
   // Sprites des images placées pour les image-maps (détruits lors d'un changement de map)
   private currentImageSprites: Phaser.GameObjects.Image[] = [];
@@ -85,6 +90,7 @@ export class DungeonScene extends Phaser.Scene {
   // ── Chargement des assets ────────────────────────────────────────��───────
   // Équivalent d'un AssetDatabase Unity — chargé avant le create()
   preload(): void {
+    /* TILED_DISABLED — Le format Tiled est en veille. Décommenter pour réactiver.
     // Le tileset est toujours requis — ne pas recharger s'il est déjà en cache
     if (!this.textures.exists("0x72_dungeon")) {
       this.load.image("0x72_dungeon", "tilesets/0x72_dungeon.png");
@@ -105,6 +111,7 @@ export class DungeonScene extends Phaser.Scene {
         this.load.tilemapTiledJSON(m.id, `maps/${m.id}.json`);
       }
     });
+    TILED_DISABLED */
   }
 
   create(): void {
@@ -224,11 +231,12 @@ export class DungeonScene extends Phaser.Scene {
   // ── Chargement / rechargement dynamique d'une map ───────────────────────
   // Supporte les formats "tiled" et "image-map" (Phase 1c)
   private _loadMap(mapName: string): void {
-    // Nettoyer l'ancienne carte Tiled
+    /* TILED_DISABLED
     this.currentMapLayers.forEach((layer) => layer.destroy());
     this.currentMapLayers = [];
     this.currentTilemap?.destroy();
     this.currentTilemap = null;
+    TILED_DISABLED */
 
     // Nettoyer les images d'une image-map précédente
     this.currentImageSprites.forEach((s) => s.destroy());
@@ -246,10 +254,14 @@ export class DungeonScene extends Phaser.Scene {
     if (mapType === "image-map") {
       void this._loadImageMap(mapName);
     } else {
-      this._loadTiledMap(mapName);
+      /* TILED_DISABLED — Le format "tiled" est en veille. La map sera ignorée.
+         Pour réactiver : décommenter _loadTiledMap() et remplacer ce bloc par this._loadTiledMap(mapName); */
+      console.warn(`[MAP] Format "tiled" désactivé — map "${mapName}" ignorée. Utiliser le format "image-map".`);
+      DebugOverlay.setLastError(`[MAP] Format tiled désactivé: ${mapName}`);
     }
   }
 
+  /* TILED_DISABLED — Décommenter pour réactiver le support des maps Tiled
   // ── Chargement d'une map Tiled ───────────────────────────────────────────
   private _loadTiledMap(mapName: string): void {
     // Créer la nouvelle tilemap depuis le cache Phaser
@@ -289,6 +301,7 @@ export class DungeonScene extends Phaser.Scene {
     // Dessiner la grille par-dessus la carte Tiled (pas = 16 px = TILE_SIZE)
     this._drawGrid(map.widthInPixels, map.heightInPixels);
   }
+  TILED_DISABLED */
 
   // ── Chargement d'une image-map (format Phase 1c) ─────────────────────────
   private async _loadImageMap(mapName: string): Promise<void> {
