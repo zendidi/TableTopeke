@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { DungeonRoom } from "../rooms/DungeonRoom";
 import { DungeonState, Token } from "../schema/DungeonState";
 
-const GM_PASSWORD = process.env.GM_PASSWORD ?? "admin";
+const GM_PASSWORD = process.env.GM_PASSWORD ?? "master1234";
 
 // Client factice minimal
 interface MockClient {

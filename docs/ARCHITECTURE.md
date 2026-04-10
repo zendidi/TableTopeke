@@ -138,10 +138,10 @@ Colyseus patch cycle :
 
 ```typescript
 // Authentification GM à la connexion (Phase 2a)
-// Le mot de passe GM est lu depuis la variable d'env GM_PASSWORD (défaut : "admin")
+// Le mot de passe GM est lu depuis la variable d'env GM_PASSWORD (défaut : "master1234")
 // TODO (Phase 5) : remplacer le mot de passe hardcodé par une vraie auth sécurisée
 onAuth(client, options) {
-  const GM_PASSWORD = process.env.GM_PASSWORD ?? "admin";
+  const GM_PASSWORD = process.env.GM_PASSWORD ?? "master1234";
   const isGM = options.gmPassword === GM_PASSWORD;
   return { isGM };
 }

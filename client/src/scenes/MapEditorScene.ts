@@ -425,7 +425,10 @@ export class MapEditorScene extends Phaser.Scene {
     } else {
       // Chargement dynamique de la texture
       this.load.image(textureKey, placed.src);
-      this.load.once("complete", () => doCreate());
+      // filecomplete-image-{key} est émis par Phaser exactement quand CETTE texture
+      // est chargée, indépendamment des autres loads en cours — plus robuste que
+      // once("complete") qui peut se déclencher pour un asset d'un cycle précédent.
+      this.load.once(`filecomplete-image-${textureKey}`, () => doCreate());
       this.load.start();
     }
   }

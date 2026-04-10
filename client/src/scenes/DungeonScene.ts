@@ -9,6 +9,9 @@ import type { ImageMapData, MapIndex, MapIndexEntry } from "../types/MapTypes";
 // (équivalent du Grid Cell Size dans Unity)
 const TILE_SIZE = 16;
 
+// Hauteur en pixels de la barre HP affichée sous chaque token
+const HP_BAR_H = 3;
+
 // Zoom initial appliqué à la caméra pour que les tuiles 16px soient lisibles à l'écran
 // (équivalent de Camera.orthographicSize Unity)
 const INITIAL_ZOOM = 2.5;
@@ -55,6 +58,9 @@ export class DungeonScene extends Phaser.Scene {
   // Token actuellement sélectionné — le GM peut sélectionner n'importe quel token,
   // un joueur uniquement le sien
   private selectedTokenId: string | null = null;
+
+  // Tween de pulsation du token dont c'est le tour (combat)
+  private activeTurnTween: Phaser.Tweens.Tween | null = null;
 
   // Panneau GM (HTML overlay) — null si le joueur n'est pas GM
   private gmPanel: GMPanel | null = null;
@@ -156,6 +162,19 @@ export class DungeonScene extends Phaser.Scene {
     // ── Synchronisation des tokens Colyseus ─────────────────────────────────
     this._syncTokens();
 
+    // ── Indicateurs visuels de combat ────────────────────────────────────────
+    network.room.state.listen("combatActive", (active: boolean) => {
+      if (!active) this._clearCombatEffects();
+    });
+
+    network.room.state.listen("currentTurnId", (turnId: string) => {
+      this._highlightActiveCombatant(turnId);
+    });
+
+    network.room.state.listen("currentTurn", (turn: number) => {
+      this.gmPanel?.updateCombatRound(turn);
+    });
+
     // ── Panneau GM (overlay HTML) — uniquement si l'utilisateur est GM ───────
     if (network.isGM) {
       const mapsIndex = this.cache.json.get("maps-index");
@@ -173,6 +192,7 @@ export class DungeonScene extends Phaser.Scene {
         network.room.state.tokens,
         (visible) => this.setGridVisible(visible),
         network.room.state.tileScale,
+        (order) => network.setInitiative(order),
       );
 
       // Mettre à jour la liste des joueurs lorsqu'un joueur rejoint ou quitte la room
@@ -312,7 +332,10 @@ export class DungeonScene extends Phaser.Scene {
             doCreate();
           } else {
             this.load.image(textureKey, placed.src);
-            this.load.once("complete", doCreate);
+            // filecomplete-image-{key} est émis par Phaser exactement quand CETTE texture
+            // est chargée, indépendamment des autres loads en cours — plus robuste que
+            // once("complete") qui peut se déclencher pour un asset d'un cycle précédent.
+            this.load.once(`filecomplete-image-${textureKey}`, doCreate);
             this.load.start();
           }
         });
@@ -445,6 +468,50 @@ export class DungeonScene extends Phaser.Scene {
     }
   }
 
+  // ── Indicateurs visuels de combat ────────────────────────────────────────
+  // Applique une pulsation dorée (tween scale 1.0 → 1.2) sur le token actif.
+  // Utilise container.scale plutôt que strokeAlpha : Phaser ne tween pas nativement
+  // les propriétés stroke d'un Arc ; scaleX/scaleY sont des propriétés Phaser
+  // standard supportées par le système de tweens.
+  private _highlightActiveCombatant(tokenId: string): void {
+    this.activeTurnTween?.stop();
+    this.activeTurnTween = null;
+
+    // Retirer le highlight de tous les tokens (reset scale)
+    this.tokenSprites.forEach((container) => {
+      container.setScale(1.0);
+      (container.getAt(0) as Phaser.GameObjects.Arc).setStrokeStyle(0);
+    });
+
+    if (!tokenId) return;
+
+    const container = this.tokenSprites.get(tokenId);
+    if (!container) return;
+
+    const circle = container.getAt(0) as Phaser.GameObjects.Arc;
+    circle.setStrokeStyle(3, 0xffd700, 1);
+
+    this.activeTurnTween = this.tweens.add({
+      targets:  container,
+      scaleX:   { from: 1.0, to: 1.2 },
+      scaleY:   { from: 1.0, to: 1.2 },
+      duration: 600,
+      yoyo:     true,
+      repeat:   -1,
+      ease:     "Sine.easeInOut",
+    });
+  }
+
+  // Efface tous les effets visuels de combat (fin de combat)
+  private _clearCombatEffects(): void {
+    this.activeTurnTween?.stop();
+    this.activeTurnTween = null;
+    this.tokenSprites.forEach((container) => {
+      container.setScale(1.0);
+      (container.getAt(0) as Phaser.GameObjects.Arc).setStrokeStyle(0);
+    });
+  }
+
   // ── Synchronisation Colyseus → Phaser ───────────────────────────────────
   private _syncTokens(): void {
     const { tokens } = network.room.state;
@@ -458,12 +525,24 @@ export class DungeonScene extends Phaser.Scene {
       token.listen("tileX", () => this._tweenToken(tokenId, token));
       token.listen("tileY", () => this._tweenToken(tokenId, token));
 
-      // Écoute les changements de HP → mise à jour du label
+      // Écoute les changements de HP → mise à jour de la barre colorée + état "hors combat"
       token.listen("hp", (newHp: number) => {
         const container = this.tokenSprites.get(tokenId);
         if (!container) return;
-        const hpLabel = container.getAt(2) as Phaser.GameObjects.Text;
-        hpLabel.setText(`${newHp}/${token.hpMax}`);
+
+        const circle = container.getAt(0) as Phaser.GameObjects.Arc;
+        const hpBar  = container.getAt(2) as Phaser.GameObjects.Graphics;
+
+        const BAR_W = TILE_SIZE * 0.8;
+        this._drawHpBar(hpBar, newHp, token.hpMax, BAR_W, HP_BAR_H);
+
+        // Token "hors combat" : grisé à 0 HP, restauré au-dessus de 0
+        if (newHp <= 0) {
+          circle.setFillStyle(0x555555, 0.4);
+        } else {
+          const color = Phaser.Display.Color.HexStringToColor(token.color ?? "#ffffff").color;
+          circle.setFillStyle(color, 1);
+        }
       });
     });
 
@@ -481,16 +560,21 @@ export class DungeonScene extends Phaser.Scene {
     });
   }
 
-  // Crée le container Phaser pour un token : cercle + nom + HP
+  // Crée le container Phaser pour un token : cercle + nom + barre HP
   private _createTokenSprite(tokenId: string, token: Token): void {
     const x = token.tileX * TILE_SIZE + TILE_SIZE / 2;
     const y = token.tileY * TILE_SIZE + TILE_SIZE / 2;
 
-    // Cercle coloré représentant le pion
+    // Cercle coloré représentant le pion (index 0)
     const color  = Phaser.Display.Color.HexStringToColor(token.color ?? "#ffffff").color;
     const circle = this.add.circle(0, 0, TILE_SIZE * 0.4, color);
 
-    // Label nom au-dessus du cercle
+    // Appliquer l'état "hors combat" dès la création si HP = 0
+    if (token.hp <= 0) {
+      circle.setFillStyle(0x555555, 0.4);
+    }
+
+    // Label nom au-dessus du cercle (index 1)
     const nameLabel = this.add.text(0, -TILE_SIZE * 0.55, token.name ?? "", {
       fontSize:   "11px",
       color:      "#ffffff",
@@ -499,21 +583,45 @@ export class DungeonScene extends Phaser.Scene {
       strokeThickness: 3,
     }).setOrigin(0.5, 1);
 
-    // Label HP en dessous du cercle
-    const hpLabel = this.add.text(0, TILE_SIZE * 0.55, `${token.hp}/${token.hpMax}`, {
-      fontSize:   "11px",
-      color:      "#88ff88",
-      fontFamily: "monospace",
-      stroke:     "#000000",
-      strokeThickness: 3,
-    }).setOrigin(0.5, 0);
+    // Barre HP colorée en dessous du cercle (index 2) — remplace le label texte HP
+    // Posée à -BAR_W/2 en X (origine haut-gauche de la barre) pour centrer sur le token
+    const BAR_W = TILE_SIZE * 0.8;
+    const BAR_H = HP_BAR_H;
+    const BAR_Y = TILE_SIZE * 0.55;
+
+    const hpBar = this.add.graphics();
+    hpBar.setPosition(-BAR_W / 2, BAR_Y);
+    this._drawHpBar(hpBar, token.hp, token.hpMax, BAR_W, BAR_H);
 
     // Regrouper les éléments dans un container et l'ajouter au tokenContainer
+    // Indices fixes : 0 = cercle, 1 = nom, 2 = barre HP
     // Le tokenContainer a setDepth(10) — les tokens restent toujours au-dessus des layers carte
-    const container = this.add.container(x, y, [circle, nameLabel, hpLabel]);
+    const container = this.add.container(x, y, [circle, nameLabel, hpBar]);
     this.tokenContainer.add(container);
 
     this.tokenSprites.set(tokenId, container);
+  }
+
+  // Dessine la barre HP avec fond sombre et couleur selon le pourcentage de HP restants
+  private _drawHpBar(
+    g: Phaser.GameObjects.Graphics,
+    hp: number,
+    hpMax: number,
+    barW: number,
+    barH: number,
+  ): void {
+    g.clear();
+
+    // Fond sombre
+    g.fillStyle(0x222222, 0.8);
+    g.fillRect(0, 0, barW, barH);
+
+    const ratio = hpMax > 0 ? Math.max(0, hp / hpMax) : 0;
+    // Vert > 50%, orange 25–50%, rouge < 25%
+    const barColor = ratio > 0.5 ? 0x44cc44 : ratio > 0.25 ? 0xffaa00 : 0xcc2222;
+
+    g.fillStyle(barColor, 1);
+    g.fillRect(0, 0, barW * ratio, barH);
   }
 
   // Lance un tween de déplacement vers la nouvelle position de tuile

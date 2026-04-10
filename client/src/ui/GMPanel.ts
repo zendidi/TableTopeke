@@ -20,6 +20,7 @@ export class GMPanel {
     private tokens: MapSchema<Token>,
     private onSetGridVisible: (visible: boolean) => void,
     private initialTileScale: number,
+    private onSetInitiative: (order: string[]) => void,
   ) {
     this.container = document.createElement("div");
     this.container.id = "gm-panel";
@@ -277,10 +278,70 @@ export class GMPanel {
     wrapper.style.gap = "4px";
     wrapper.style.flexWrap = "wrap";
 
+    // ── Saisie des scores d'initiative ────────────────────────────────────────
+    const initiativeBlock = document.createElement("div");
+    initiativeBlock.id = "gm-initiative-block";
+    Object.assign(initiativeBlock.style, { width: "100%", marginBottom: "4px" });
+
+    const initiativeTitle = document.createElement("div");
+    initiativeTitle.textContent = "Initiative :";
+    Object.assign(initiativeTitle.style, { fontSize: "11px", color: "#aaaaaa", marginBottom: "4px" });
+    initiativeBlock.appendChild(initiativeTitle);
+
+    this.tokens.forEach((token: Token, tokenId: string) => {
+      const row = document.createElement("div");
+      Object.assign(row.style, { display: "flex", alignItems: "center", gap: "4px", marginBottom: "2px" });
+
+      const nameSpan = document.createElement("span");
+      nameSpan.textContent = token.name;
+      Object.assign(nameSpan.style, { flex: "1", fontSize: "11px", color: "#dddddd" });
+      row.appendChild(nameSpan);
+
+      const input = document.createElement("input");
+      input.type = "number";
+      input.value = "0";
+      input.dataset.tokenId = tokenId;
+      input.className = "gm-initiative-input";
+      Object.assign(input.style, {
+        width:      "45px",
+        background: "#1a1a2e",
+        color:      "white",
+        border:     "1px solid #7b2d8b",
+        padding:    "2px",
+        fontFamily: "monospace",
+        fontSize:   "11px",
+      });
+      row.appendChild(input);
+
+      initiativeBlock.appendChild(row);
+    });
+
+    wrapper.appendChild(initiativeBlock);
+
+    // ── Boutons combat ────────────────────────────────────────────────────────
     const btnStart = document.createElement("button");
     btnStart.textContent = "Démarrer";
     Object.assign(btnStart.style, this._btnStyle("#2d8b2d"));
-    btnStart.addEventListener("click", () => this.onCombat("start"));
+    btnStart.addEventListener("click", () => {
+      // Lire les scores d'initiative, valider, trier par score décroissant, envoyer au serveur
+      const inputs = document.querySelectorAll<HTMLInputElement>(".gm-initiative-input");
+      const entries: { tokenId: string; score: number }[] = [];
+      let hasInvalid = false;
+      inputs.forEach((inp) => {
+        const tokenId = inp.dataset.tokenId;
+        const score   = parseInt(inp.value, 10);
+        if (!tokenId) return;
+        if (isNaN(score)) { hasInvalid = true; return; }
+        entries.push({ tokenId, score });
+      });
+      if (hasInvalid) {
+        console.warn("[GMPanel] Certains scores d'initiative sont invalides — ignorés");
+      }
+      entries.sort((a, b) => b.score - a.score);
+      const sortedIds = entries.map((e) => e.tokenId);
+      if (sortedIds.length > 0) this.onSetInitiative(sortedIds);
+      this.onCombat("start");
+    });
 
     const btnEnd = document.createElement("button");
     btnEnd.textContent = "Fin";
@@ -295,7 +356,20 @@ export class GMPanel {
     wrapper.appendChild(btnStart);
     wrapper.appendChild(btnEnd);
     wrapper.appendChild(btnNext);
+
+    const roundLabel = document.createElement("div");
+    roundLabel.id = "gm-combat-round";
+    roundLabel.textContent = "Round : —";
+    Object.assign(roundLabel.style, { fontSize: "11px", color: "#aaaaaa", marginTop: "4px", width: "100%" });
+    wrapper.appendChild(roundLabel);
+
     return wrapper;
+  }
+
+  // Met à jour le label de round dans la section combat
+  updateCombatRound(round: number): void {
+    const el = document.getElementById("gm-combat-round");
+    if (el) el.textContent = round > 0 ? `Round : ${round}` : "Round : —";
   }
 
   // Section activation Fog of War et LOS, et toggle grille

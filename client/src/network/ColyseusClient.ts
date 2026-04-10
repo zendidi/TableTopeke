@@ -105,6 +105,12 @@ class NetworkManager {
     if (DEBUG_NETWORK) console.log("[NET →] LOAD_MAP", { mapName });
     this.room.send("LOAD_MAP", { mapName });
   }
+
+  // Définit l'ordre d'initiative (GM seulement)
+  setInitiative(order: string[]): void {
+    if (DEBUG_NETWORK) console.log("[NET →] SET_INITIATIVE", { order });
+    this.room.send("SET_INITIATIVE", { order });
+  }
 }
 
 // Export du singleton pour utilisation dans toutes les scènes
