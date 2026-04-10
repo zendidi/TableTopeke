@@ -1,12 +1,7 @@
 {
-  "_comment": "Ajouter ici chaque map image-map (sans extension .json) pour qu'elle apparaisse dans le sélecteur GM. Utilisez tools/generate-images-index.js pour régénérer images/index.json après avoir ajouté des PNG.",
+  "_comment": "Ajouter ici chaque map image-map (sans extension .json) pour qu'elle apparaisse dans le sélecteur GM. Format Tiled en veille (TILED_DISABLED) — voir docs/ARCHITECTURE.md.",
+  "_tiled_disabled": "grande-salle est conservée dans client/public/maps/ mais retirée de l'index actif. Réactiver en remettant l'entrée dans le tableau maps[] et en restaurant TILED_DISABLED dans DungeonScene.ts.",
   "maps": [
-    {
-      "id": "grande-salle",
-      "label": "Grande Salle",
-      "type": "tiled",
-      "description": "Map de test Phase 1a — 40×40 cases, tileset 0x72 Dungeon"
-    },
     {
       "id": "salle-images",
       "label": "Salle (Images)",
@@ -14,5 +9,5 @@
       "description": "Map de démonstration composée de PNG — système image-map"
     }
   ],
-  "defaultMap": "grande-salle"
+  "defaultMap": "salle-images"
 }

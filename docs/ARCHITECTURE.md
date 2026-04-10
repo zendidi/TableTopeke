@@ -303,9 +303,9 @@ Tiled Map Editor (externe)
 ```json
 {
   "maps": [
-    { "id": "grande-salle", "label": "Grande Salle", "description": "..." }
+    { "id": "salle-images", "label": "Salle (Images)", "type": "image-map", "description": "..." }
   ],
-  "defaultMap": "grande-salle"
+  "defaultMap": "salle-images"
 }
 ```
 
@@ -348,7 +348,12 @@ Flux complet :
 
 `DungeonScene` supporte deux formats de maps discriminés par le champ `type` dans `maps/index.json` :
 
-### `tiled` — Map Tiled JSON classique (défaut)
+### `tiled` — Map Tiled JSON classique ⏸️ EN VEILLE
+
+> **TILED_DISABLED** : Le support Tiled est temporairement désactivé (hors scope actuel).
+> Le code est commenté dans `DungeonScene.ts` avec le marqueur `TILED_DISABLED`.
+> Les fichiers `client/public/maps/grande-salle.json` et `client/public/tilesets/0x72_dungeon.png` sont conservés.
+> Pour réactiver : décommenter les blocs `TILED_DISABLED` dans `DungeonScene.ts` et rajouter `grande-salle` dans `maps/index.json`.
 
 - Créée avec **Tiled Map Editor** (outil externe)
 - Layers obligatoires : `sol`, `murs` (avec collisions)

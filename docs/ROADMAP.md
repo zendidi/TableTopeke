@@ -16,7 +16,7 @@
 | Phase | Description | Statut |
 |-------|-------------|--------|
 | **0** | Setup & Scaffold | ✅ Terminé |
-| **1a** | Tileset 0x72 + rendu carte Tiled + map de test | ✅ Terminé |
+| **1a** | Tileset 0x72 + rendu carte Tiled + map de test | ⏸️ En veille (TILED_DISABLED) |
 | **1b** | Sélecteur de map GM + sync Colyseus `LOAD_MAP` | ✅ Terminé |
 | **1c** | Éditeur de map par images drag & drop (GM only) | ✅ Terminé |
 | **2a** | Serveur Colyseus — état & rôles avancés | ✅ Terminé |
@@ -51,7 +51,9 @@
 
 ---
 
-## Phase 1a — Tileset 0x72 + Rendu Tiled + Map de test ✅ Terminé
+## Phase 1a — Tileset 0x72 + Rendu Tiled + Map de test ⏸️ En veille (TILED_DISABLED)
+
+> ⏸️ **TILED_DISABLED** : Le format Tiled est temporairement mis en veille. Le code est conservé mais commenté. La map par défaut est désormais `salle-images` (image-map).
 
 ### Tâches
 
