@@ -1,0 +1,34 @@
+{
+  "id": "CEtte map",
+  "label": "CEtte map",
+  "type": "image-map",
+  "widthInTiles": 80,
+  "heightInTiles": 60,
+  "tileSize": 64,
+  "images": [
+    {
+      "id": "img_0",
+      "src": "images/salle-secondaire.png",
+      "x": 8,
+      "y": 5,
+      "widthInTiles": 5,
+      "heightInTiles": 4
+    },
+    {
+      "id": "img_1",
+      "src": "images/salle-principale.png",
+      "x": 18,
+      "y": 5,
+      "widthInTiles": 5,
+      "heightInTiles": 4
+    },
+    {
+      "id": "img_2",
+      "src": "images/couloir-horizontal.png",
+      "x": 13,
+      "y": 5,
+      "widthInTiles": 5,
+      "heightInTiles": 4
+    }
+  ]
+}

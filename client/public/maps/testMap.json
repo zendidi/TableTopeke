@@ -1,0 +1,26 @@
+{
+  "id": "testMap",
+  "label": "testMap",
+  "type": "image-map",
+  "widthInTiles": 80,
+  "heightInTiles": 60,
+  "tileSize": 64,
+  "images": [
+    {
+      "id": "img_0",
+      "src": "images/couloir-horizontal.png",
+      "x": 32,
+      "y": 12,
+      "widthInTiles": 5,
+      "heightInTiles": 4
+    },
+    {
+      "id": "img_1",
+      "src": "images/salle-principale.png",
+      "x": 63,
+      "y": 21,
+      "widthInTiles": 5,
+      "heightInTiles": 4
+    }
+  ]
+}

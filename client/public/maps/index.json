@@ -7,6 +7,18 @@
       "label": "Salle (Images)",
       "type": "image-map",
       "description": "Map de démonstration composée de PNG — système image-map"
+    },
+    {
+      "id": "testMap",
+      "label": "Salle 2(Images)",
+      "type": "image-map",
+      "description": "Map de démonstration composée de PNG"
+    },
+    {
+      "id": "CEtte map",
+      "label": "Salle 3(Images)",
+      "type": "image-map",
+      "description": "Map de démonstration "
     }
   ],
   "defaultMap": "salle-images"

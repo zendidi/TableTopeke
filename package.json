@@ -1,0 +1,10 @@
+{
+  "name": "tabletopeke",
+  "private": true,
+  "scripts": {
+    "test":        "cd server && npm run test:unit",
+    "test:server": "cd server && npm run test:unit",
+    "test:client": "cd client && npm run test:unit",
+    "test:all":    "cd server && npm run test:unit && cd ../client && npm run test:unit"
+  }
+}
