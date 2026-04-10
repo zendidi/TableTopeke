@@ -52,13 +52,17 @@ class NetworkManager {
 
     // isGM NE PEUT PAS être lu immédiatement après joinOrCreate :
     // state.gmSessionId vaut "" jusqu'à réception du premier patch Colyseus.
-    // On écoute le premier onStateChange pour lire la valeur réelle,
-    // puis un listener permanent pour gérer les changements ultérieurs.
+    // On attend le premier onStateChange (via une Promise) avant de résoudre connect(),
+    // ce qui garantit que network.isGM est correct dès que DungeonScene.create() le lit.
+    // Un listener permanent gère les changements ultérieurs (ex: reconnexion GM).
     this.isGM = false; // valeur sûre par défaut
 
-    this.room.onStateChange.once(() => {
-      this.isGM = this.room.state.gmSessionId === this.room.sessionId;
-      console.log(`[NetworkManager] isGM (après premier patch) : ${this.isGM}`);
+    await new Promise<void>((resolve) => {
+      this.room.onStateChange.once(() => {
+        this.isGM = this.room.state.gmSessionId === this.room.sessionId;
+        console.log(`[NetworkManager] isGM (après premier patch) : ${this.isGM}`);
+        resolve();
+      });
     });
 
     this.room.state.listen("gmSessionId", (newId: string) => {
