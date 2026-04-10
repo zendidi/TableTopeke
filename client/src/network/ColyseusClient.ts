@@ -49,10 +49,26 @@ class NetworkManager {
 
     this.client = new Colyseus.Client(endpoint);
     this.room   = await this.client.joinOrCreate<DungeonState>("dungeon", mergedOptions);
-    // isGM est déterminé depuis l'état serveur : si le serveur a enregistré notre sessionId
-    // comme gmSessionId, l'auth a réussi. Cela évite l'état incohérent où le client se croit
-    // GM alors que le serveur a rejeté le mot de passe.
-    this.isGM   = this.room.state.gmSessionId === this.room.sessionId;
+
+    // isGM NE PEUT PAS être lu immédiatement après joinOrCreate :
+    // state.gmSessionId vaut "" jusqu'à réception du premier patch Colyseus.
+    // On attend le premier onStateChange (via une Promise) avant de résoudre connect(),
+    // ce qui garantit que network.isGM est correct dès que DungeonScene.create() le lit.
+    // Un listener permanent gère les changements ultérieurs (ex: reconnexion GM).
+    this.isGM = false; // valeur sûre par défaut
+
+    await new Promise<void>((resolve) => {
+      this.room.onStateChange.once(() => {
+        this.isGM = this.room.state.gmSessionId === this.room.sessionId;
+        console.log(`[NetworkManager] isGM (après premier patch) : ${this.isGM}`);
+        resolve();
+      });
+    });
+
+    this.room.state.listen("gmSessionId", (newId: string) => {
+      this.isGM = newId === this.room.sessionId;
+      console.log(`[NetworkManager] gmSessionId mis à jour → isGM: ${this.isGM}`);
+    });
 
     console.log(`[NetworkManager] Connecté à ${endpoint} — sessionId: ${this.room.sessionId}`);
 
