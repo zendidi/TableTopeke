@@ -44,7 +44,7 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/lang/fr/).
   - `Token.isVisible: boolean` — visibilité du token (Fog of War Phase 4)
   - `DungeonState.currentTurn: number` — numéro du tour courant (renommé depuis `round`)
 - `server/src/rooms/DungeonRoom.ts` :
-  - `onAuth(client, options)` — authentification GM par mot de passe avant `onJoin` (mot de passe hardcodé `"admin"`, TODO Phase 5)
+  - `onAuth(client, options)` — authentification GM par mot de passe avant `onJoin` (mot de passe par défaut `"master1234"`, TODO Phase 5)
   - `allowReconnection(client, 30)` dans `onLeave` — restauration du joueur/token si reconnexion dans les 30s
 - `client/src/network/ColyseusClient.ts` :
   - `network.players` — getter vers `room.state.players` (MapSchema synchronisée)

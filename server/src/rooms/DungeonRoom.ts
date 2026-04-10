@@ -1,7 +1,7 @@
 import { Room, Client } from "colyseus";
 import { DungeonState, Player, Token } from "../schema/DungeonState";
 
-// Mot de passe GM — priorité à la variable d'environnement, fallback sur "admin"
+// Mot de passe GM — priorité à la variable d'environnement, fallback sur "master1234"
 // TODO (Phase 5) : remplacer par une authentification sécurisée
 const GM_PASSWORD = process.env.GM_PASSWORD ?? "master1234";
 
@@ -124,7 +124,7 @@ export class DungeonRoom extends Room<DungeonState> {
             const idx = order.indexOf(this.state.currentTurnId);
             // Si currentTurnId n'est pas dans l'ordre (idx === -1), repartir du début (idx 0)
             const nextIdx = (Math.max(0, idx) + 1) % order.length;
-            this.state.currentTurnId = order[nextIdx];
+            this.state.currentTurnId = order[nextIdx] ?? "";
           }
           console.log(`[STATE] currentTurn → ${this.state.currentTurn}, currentTurnId → ${this.state.currentTurnId}`);
           break;

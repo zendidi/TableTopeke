@@ -152,7 +152,7 @@ it("NOUVEAU_MESSAGE : description du comportement attendu", async () => {
 
 ## 5. Variable d'environnement GM
 
-Pour utiliser un mot de passe GM personnalisé (au lieu du défaut `"admin"`) :
+Pour utiliser un mot de passe GM personnalisé (au lieu du défaut `"master1234"`) :
 
 ```bash
 # Linux / Mac
