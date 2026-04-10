@@ -83,6 +83,18 @@ export class DungeonRoom extends Room<DungeonState> {
       if (data.losEnabled !== undefined) this.state.losEnabled = data.losEnabled;
     });
 
+    // ── SET_INITIATIVE ────────────────────────────────────────────────────────
+    // GM seulement — définit l'ordre d'initiative pour le combat au tour par tour
+    this.onMessage("SET_INITIATIVE", (client, data: { order: string[] }) => {
+      console.log(`[MSG] SET_INITIATIVE sessionId=${client.sessionId} payload=${JSON.stringify(data)}`);
+      if (client.sessionId !== this.state.gmSessionId) return;
+      if (!Array.isArray(data.order)) return;
+
+      this.state.initiativeOrder.clear();
+      data.order.forEach((tokenId) => this.state.initiativeOrder.push(tokenId));
+      console.log(`[STATE] initiativeOrder → [${data.order.join(", ")}]`);
+    });
+
     // ── COMBAT_ACTION ─────────────────────────────────────────────────────────
     // GM seulement — contrôle du mode combat au tour par tour
     this.onMessage("COMBAT_ACTION", (client, data: { action: "start" | "end" | "next" }) => {
@@ -93,20 +105,29 @@ export class DungeonRoom extends Room<DungeonState> {
         case "start":
           this.state.combatActive = true;
           this.state.currentTurn = 1;
-          console.log(`[STATE] currentTurn → ${this.state.currentTurn}`);
+          // Premier combattant = tête de l'ordre d'initiative
+          this.state.currentTurnId = this.state.initiativeOrder[0] ?? "";
+          console.log(`[STATE] currentTurn → ${this.state.currentTurn}, currentTurnId → ${this.state.currentTurnId}`);
           break;
         case "end":
           this.state.combatActive = false;
           this.state.currentTurn = 0;
           this.state.currentTurnId = "";
+          this.state.initiativeOrder.clear();
           console.log(`[STATE] currentTurn → ${this.state.currentTurn}`);
           break;
-        case "next":
+        case "next": {
           if (!this.state.combatActive) return;
           this.state.currentTurn += 1;
-          console.log(`[STATE] currentTurn → ${this.state.currentTurn}`);
-          // La logique d'ordre d'initiative peut être étendue ici (Phase 3)
+          const order = this.state.initiativeOrder;
+          if (order.length > 0) {
+            const idx     = order.indexOf(this.state.currentTurnId);
+            const nextIdx = (idx + 1) % order.length;
+            this.state.currentTurnId = order[nextIdx];
+          }
+          console.log(`[STATE] currentTurn → ${this.state.currentTurn}, currentTurnId → ${this.state.currentTurnId}`);
           break;
+        }
       }
     });
 

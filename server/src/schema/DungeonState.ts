@@ -1,4 +1,4 @@
-import { Schema, MapSchema, type } from "@colyseus/schema";
+import { Schema, MapSchema, ArraySchema, type } from "@colyseus/schema";
 
 // Représente un pion sur la grille (équivalent d'un NetworkObject Unity)
 export class Token extends Schema {
@@ -47,4 +47,7 @@ export class DungeonState extends Schema {
 
   // Nom de la map active (sans extension .json) — synchronisé en temps réel
   @type("string")  currentMap: string = "grande-salle";
+
+  // Ordre d'initiative : tableau des tokenId dans l'ordre de passage (Phase 3)
+  @type(["string"]) initiativeOrder = new ArraySchema<string>();
 }
