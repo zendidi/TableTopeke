@@ -2,7 +2,7 @@
 // Positionné en overlay sur le canvas Phaser via position fixed CSS
 // Équivalent du panneau GM Unity (Inspector + custom EditorWindow)
 
-import type { MapSchema } from "@colyseus/schema";
+import type { MapSchema, ArraySchema } from "@colyseus/schema";
 import type { Player, Token } from "../../../server/src/schema/DungeonState";
 
 export class GMPanel {
@@ -363,6 +363,21 @@ export class GMPanel {
     Object.assign(roundLabel.style, { fontSize: "11px", color: "#aaaaaa", marginTop: "4px", width: "100%" });
     wrapper.appendChild(roundLabel);
 
+    // ── Ordre d'initiative en cours ───────────────────────────────────────────
+    const orderTitle = document.createElement("div");
+    orderTitle.textContent = "Ordre d'initiative :";
+    Object.assign(orderTitle.style, { fontSize: "11px", color: "#aaaaaa", marginTop: "8px", width: "100%" });
+    wrapper.appendChild(orderTitle);
+
+    const orderList = document.createElement("div");
+    orderList.id = "gm-initiative-order";
+    Object.assign(orderList.style, { width: "100%", marginTop: "2px" });
+    const orderEmpty = document.createElement("div");
+    orderEmpty.textContent = "Aucun ordre défini";
+    Object.assign(orderEmpty.style, { color: "#555555", fontSize: "11px", fontStyle: "italic" });
+    orderList.appendChild(orderEmpty);
+    wrapper.appendChild(orderList);
+
     return wrapper;
   }
 
@@ -497,6 +512,84 @@ export class GMPanel {
     this.players.forEach((player: Player, sessionId: string) => {
       const token = this.tokens.get(sessionId);
       listEl.appendChild(this._buildPlayerRow(player, token ?? null));
+    });
+  }
+
+  // Met à jour la liste "Ordre d'initiative en cours" dans la section combat
+  updateInitiativeOrder(
+    initiativeOrder: ArraySchema<string>,
+    tokens: MapSchema<Token>,
+    currentTurnId: string,
+  ): void {
+    const listEl = document.getElementById("gm-initiative-order");
+    if (!listEl) return;
+
+    listEl.innerHTML = "";
+
+    if (initiativeOrder.length === 0) {
+      const empty = document.createElement("div");
+      empty.textContent = "Aucun ordre défini";
+      Object.assign(empty.style, { color: "#555555", fontSize: "11px", fontStyle: "italic" });
+      listEl.appendChild(empty);
+      return;
+    }
+
+    initiativeOrder.forEach((tokenId: string, index: number) => {
+      const token = tokens.get(tokenId);
+      const isActive = tokenId === currentTurnId;
+
+      const row = document.createElement("div");
+      Object.assign(row.style, {
+        display:      "flex",
+        alignItems:   "center",
+        gap:          "4px",
+        marginBottom: "2px",
+        padding:      "2px 4px",
+        borderRadius: "3px",
+        background:   isActive ? "rgba(255,215,0,0.15)" : "rgba(255,255,255,0.04)",
+        color:        isActive ? "#ffd700" : "#dddddd",
+        fontSize:     "11px",
+      });
+
+      // Numéro de position
+      const numSpan = document.createElement("span");
+      numSpan.textContent = `${index + 1}.`;
+      Object.assign(numSpan.style, { color: "#888888", minWidth: "16px" });
+      row.appendChild(numSpan);
+
+      if (token) {
+        // Point coloré
+        const dot = document.createElement("span");
+        Object.assign(dot.style, {
+          display:      "inline-block",
+          width:        "8px",
+          height:       "8px",
+          borderRadius: "50%",
+          background:   token.color ?? "#ffffff",
+          flexShrink:   "0",
+        });
+        row.appendChild(dot);
+
+        // Nom du token
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = isActive ? `▶ ${token.name}` : token.name;
+        Object.assign(nameSpan.style, { flex: "1" });
+        row.appendChild(nameSpan);
+
+        // HP
+        const hpSpan = document.createElement("span");
+        hpSpan.textContent = `${token.hp}hp`;
+        Object.assign(hpSpan.style, { color: "#88ff88" });
+        row.appendChild(hpSpan);
+      } else {
+        // Token introuvable (déconnecté)
+        const unknownSpan = document.createElement("span");
+        unknownSpan.textContent = `(inconnu — ${tokenId.slice(0, 6)})`;
+        Object.assign(unknownSpan.style, { color: "#555555", fontStyle: "italic" });
+        row.appendChild(unknownSpan);
+      }
+
+      listEl.appendChild(row);
     });
   }
 

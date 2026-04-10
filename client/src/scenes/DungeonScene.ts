@@ -3,6 +3,8 @@ import type { Token } from "../../../server/src/schema/DungeonState";
 import { GMPanel } from "../ui/GMPanel";
 import { DebugPanel } from "../ui/DebugPanel";
 import { DebugOverlay } from "../ui/DebugOverlay";
+import { InitiativeTracker } from "../ui/InitiativeTracker";
+import { TurnNotification } from "../ui/TurnNotification";
 import type { ImageMapData, MapIndex, MapIndexEntry } from "../types/MapTypes";
 
 // Taille d'une case en pixels — correspond aux tuiles 16×16 du tileset 0x72 Dungeon
@@ -69,6 +71,12 @@ export class DungeonScene extends Phaser.Scene {
 
   // Panneau GM (HTML overlay) — null si le joueur n'est pas GM
   private gmPanel: GMPanel | null = null;
+
+  // Initiative Tracker (HTML overlay) — visible pour tous les joueurs
+  private initiativeTracker: InitiativeTracker | null = null;
+
+  // Toast "c'est ton tour" — déclenché uniquement pour le joueur actif
+  private turnNotification: TurnNotification | null = null;
 
   // Panneau de debug (HTML overlay) — toggle avec la touche `
   private debugPanel: DebugPanel | null = null;
@@ -169,17 +177,51 @@ export class DungeonScene extends Phaser.Scene {
     // ── Synchronisation des tokens Colyseus ─────────────────────────────────
     this._syncTokens();
 
+    // ── Initiative Tracker — visible pour tous les joueurs ───────────────────
+    this.initiativeTracker = new InitiativeTracker(
+      network.room.state.tokens,
+      network.room.state.initiativeOrder,
+      () => network.room.state.currentTurnId,
+      () => network.room.state.currentTurn,
+    );
+
+    // ── Toast "ton tour" ─────────────────────────────────────────────────────
+    this.turnNotification = new TurnNotification();
+
     // ── Indicateurs visuels de combat ────────────────────────────────────────
     network.room.state.listen("combatActive", (active: boolean) => {
       if (!active) this._clearCombatEffects();
+      this.initiativeTracker?.update(
+        active,
+        network.room.state.currentTurnId,
+        network.room.state.currentTurn,
+      );
     });
 
     network.room.state.listen("currentTurnId", (turnId: string) => {
       this._highlightActiveCombatant(turnId);
+      this.initiativeTracker?.update(
+        network.room.state.combatActive,
+        turnId,
+        network.room.state.currentTurn,
+      );
+      this.gmPanel?.updateInitiativeOrder(
+        network.room.state.initiativeOrder,
+        network.room.state.tokens,
+        turnId,
+      );
+      if (turnId === network.room.sessionId) {
+        this.turnNotification?.show();
+      }
     });
 
     network.room.state.listen("currentTurn", (turn: number) => {
       this.gmPanel?.updateCombatRound(turn);
+      this.initiativeTracker?.update(
+        network.room.state.combatActive,
+        network.room.state.currentTurnId,
+        turn,
+      );
     });
 
     // ── Panneau GM (overlay HTML) — uniquement si l'utilisateur est GM ───────
@@ -755,6 +797,10 @@ export class DungeonScene extends Phaser.Scene {
   shutdown(): void {
     this.gmPanel?.destroy();
     this.gmPanel = null;
+    this.initiativeTracker?.destroy();
+    this.initiativeTracker = null;
+    this.turnNotification?.destroy();
+    this.turnNotification = null;
     this.debugPanel?.destroy();
     this.debugPanel = null;
     this.debugOverlay?.destroy();
