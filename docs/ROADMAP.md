@@ -21,7 +21,7 @@
 | **1c** | Éditeur de map par images drag & drop (GM only) | ✅ Terminé |
 | **2a** | Serveur Colyseus — état & rôles avancés | ✅ Terminé |
 | **2b** | Frontend Phaser 3 — tokens, caméra, UI GM | ✅ Terminé |
-| **3** | Combat & Distances | 🔶 Distances ✅ (combat hors-ligne) |
+| **3** | Combat & Distances | ✅ Terminé le 2026-04-10 |
 | **4** | Fog of War (Ligne de vue réelle) | ⬜ À faire |
 | **5** | Personnalisation joueurs | ⬜ À faire |
 | **6** | Packaging & Distribution | 🔶 En cours |
@@ -195,7 +195,7 @@
 - [x] Scroll de caméra (clic droit + glisser)
 - [x] Zoom (molette souris, clampé entre 0.3 et 2.5)
 - [x] Interface GM : panneau latéral HTML overlay (`GMPanel`) — joueurs, HP, maps, combat, fog, échelle
-- [ ] Indicateur de tour actif / combattant courant (état `combatActive`/`currentTurnId` synchronisé, affichage visuel sur le canvas non implémenté)
+- [x] Indicateur de tour actif / combattant courant — tween doré sur token actif (`_highlightActiveCombatant`), `InitiativeTracker` overlay HTML visible tous joueurs, `TurnNotification` toast "c'est ton tour"
 
 ### ✅ Critères de validation
 
@@ -206,36 +206,47 @@
 
 ---
 
-## Phase 3 — Combat & Distances ⬜ À faire
+## Phase 3 — Combat & Distances ✅ Terminé le 2026-04-10
 
 ### Grille & Échelle
 
-- [ ] Affichage de la grille de cases sur la carte
-- [ ] Paramètre configurable : 1 case = X mètres (ex: 1.5m)
+- [x] Affichage de la grille de cases sur la carte (`_drawGrid` dans `DungeonScene`)
+- [x] Paramètre configurable : 1 case = X mètres — message `SET_TILE_SCALE`, `tileScale` dans `DungeonState`
+- [x] Section "Échelle" dans le GMPanel
 
 ### Outil de mesure
 
-- [ ] Clic-glisser pour mesurer une distance
-- [ ] Affichage de la distance en cases ET en mètres
+- [x] Shift + clic-glisser pour mesurer une distance (`_updateMeasure`, `_stopMeasure`)
+- [x] Affichage de la distance en cases ET en mètres (distance Chebyshev × tileScale)
 
 ### Portée
 
-- [ ] Cercle de portée autour du token sélectionné
-- [ ] Paramètre de portée par token/classe
+- [x] Cercle de portée autour du token sélectionné au clic (`_showRangeCircle`, rayon 6 cases)
+- [ ] Paramètre de portée configurable par token/classe (rayon fixe à 6 pour l'instant)
 
 ### Initiative & Combat
 
-- [ ] Initiative tracker : liste ordonnée des combattants
-- [ ] Round counter
-- [ ] Barre de HP visuelle au-dessus de chaque token
-- [ ] Fin de tour (passage au combattant suivant)
+- [x] Message `SET_INITIATIVE` — GM définit l'ordre, `initiativeOrder` ArraySchema synchronisé
+- [x] `COMBAT_ACTION` (start / end / next) — `combatActive`, `currentTurn`, `currentTurnId` synchronisés
+- [x] Barre de HP visuelle colorée sous chaque token (`_drawHpBar`, vert/orange/rouge selon ratio)
+- [x] Token "hors combat" grisé à 0 HP
+- [x] Pulsation dorée (tween) sur le token actif (`_highlightActiveCombatant`)
+- [x] Saisie des scores d'initiative dans le GMPanel (tri décroissant automatique)
+- [x] Round counter dans le GMPanel (`updateCombatRound`)
+- [x] Initiative tracker visible pour tous les joueurs — `InitiativeTracker` overlay HTML
+- [x] Notification "c'est ton tour" — `TurnNotification` toast HTML
+- [x] Ordre d'initiative en cours visible dans le GMPanel (lecture seule, synchronisé)
 
 ### ✅ Critères de validation
 
-- La grille est visible et s'aligne avec la carte
-- La mesure clic-glisser affiche la bonne distance en mètres
-- L'initiative tracker est synchronisé entre tous les clients
-- Les HP sont mis à jour en temps réel sur les tokens
+- [x] La grille est visible et s'aligne avec la carte
+- [x] La mesure Shift+clic-glisser affiche la bonne distance en mètres
+- [x] L'initiative tracker est synchronisé entre tous les clients
+- [x] Les HP sont mis à jour en temps réel sur les tokens
+- [x] Le tween doré identifie le token dont c'est le tour
+- [x] Round counter visible sur le canvas pendant le combat
+- [x] Le joueur actif reçoit une notification "c'est ton tour"
+- [x] Le GM voit l'ordre d'initiative en cours dans son panneau
 
 ---
 
