@@ -98,9 +98,9 @@ export class InitiativeTracker {
         marginBottom:  "2px",
       });
 
-      // Préfixe ▶ si c'est le tour actif, sinon espace de même largeur
+      // Préfixe ▶ si c'est le tour actif, sinon invisible (minWidth réserve l'espace)
       const prefix = document.createElement("span");
-      prefix.textContent = isActive ? "▶" : " ";
+      prefix.textContent = isActive ? "▶" : "";
       Object.assign(prefix.style, { minWidth: "12px", textAlign: "center" });
       row.appendChild(prefix);
 

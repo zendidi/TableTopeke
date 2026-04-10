@@ -46,7 +46,7 @@ export class TurnNotification {
     void this.container.offsetHeight;
     this.container.style.opacity = "1";
 
-    // Disparition après 2100ms (transition fade-out de 400ms pour atteindre 2500ms total)
+    // Disparition après 2100ms (fade-out 400ms, pour une durée totale visible de 2500ms)
     this.hideTimer = setTimeout(() => {
       this.container.style.transition = "opacity 400ms ease-out";
       this.container.style.opacity = "0";
