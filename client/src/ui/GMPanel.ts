@@ -206,8 +206,13 @@ export class GMPanel {
         if (!currentToken) return;
         const newVisible = !currentToken.isVisible;
         this.onSetTokenVisibility(currentToken.id, newVisible);
-        btnVis.textContent = newVisible ? "👁 Masquer" : "👁 Afficher";
       });
+      // Mettre à jour le texte du bouton en réponse aux changements de visibilité Colyseus
+      if (liveToken) {
+        liveToken.listen("isVisible", (visible: boolean) => {
+          btnVis.textContent = visible ? "👁 Masquer" : "👁 Afficher";
+        });
+      }
       row.appendChild(btnVis);
     }
 

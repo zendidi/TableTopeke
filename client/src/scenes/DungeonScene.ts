@@ -24,6 +24,11 @@ const DEFAULT_MAP_NAME = "salle-images"; // TILED_DISABLED — était "grande-sa
 // Rayon du cercle de portée en cases (bonus feature 4)
 const RANGE_CIRCLE_TILES = 6;
 
+// Taille du rectangle de brouillard (assez grand pour couvrir n'importe quelle map)
+const FOG_OVERLAY_SIZE  = 99999;
+// Opacité de l'overlay brouillard (0 = transparent, 1 = opaque)
+const FOG_OVERLAY_ALPHA = 0.55;
+
 // DungeonScene — scène de jeu principale
 // Équivalent d'une GameScene Unity avec GameObjects synchronisés via Colyseus
 export class DungeonScene extends Phaser.Scene {
@@ -707,7 +712,7 @@ export class DungeonScene extends Phaser.Scene {
       if (!this.fogOverlay) {
         // Rectangle couvrant la zone visible — mis à jour si la caméra bouge
         // Depth 6 : au-dessus de la grille (5), sous les tokens (10)
-        this.fogOverlay = this.add.rectangle(0, 0, 99999, 99999, 0x000000, 0.55);
+        this.fogOverlay = this.add.rectangle(0, 0, FOG_OVERLAY_SIZE, FOG_OVERLAY_SIZE, 0x000000, FOG_OVERLAY_ALPHA);
         this.fogOverlay.setOrigin(0, 0);
         this.fogOverlay.setDepth(6);
         this.fogOverlay.setScrollFactor(0); // fixe par rapport à la caméra
