@@ -54,6 +54,8 @@ function createPanel(overrides: {
     (overrides.tokens ?? new MockMapSchema()) as any,
     vi.fn(),
     1.5,
+    vi.fn(),
+    vi.fn(),
   );
 }
 

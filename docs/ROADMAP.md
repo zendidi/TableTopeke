@@ -22,7 +22,7 @@
 | **2a** | Serveur Colyseus — état & rôles avancés | ✅ Terminé |
 | **2b** | Frontend Phaser 3 — tokens, caméra, UI GM | ✅ Terminé |
 | **3** | Combat & Distances | ✅ Terminé le 2026-04-10 |
-| **4** | Fog of War (Ligne de vue réelle) | ⬜ À faire |
+| **4** | Fog of War (Ligne de vue réelle) | 🔄 En cours |
 | **5** | Personnalisation joueurs | ⬜ À faire |
 | **6** | Packaging & Distribution | 🔶 En cours |
 | **7** | Création du Donjon | ⬜ À faire |
@@ -250,27 +250,32 @@
 
 ---
 
-## Phase 4 — Fog of War (Ligne de vue réelle) ⬜ À faire
+## Phase 4 — Fog of War (Ligne de vue réelle) 🔄 En cours
 
 ### Mode "Révélation globale"
 
 - [ ] Le GM peut révéler / cacher des zones entières (salles)
-- [ ] Masque visuel pour les zones non révélées
-- [ ] Switch GM on/off pour ce mode
+- [x] Masque visuel pour les zones non révélées (overlay noir sur `fogEnabled`, `_applyFogState()`)
+- [x] Switch GM on/off pour ce mode (`TOGGLE_FOG` + checkbox "Fog global" dans `GMPanel`)
+- [x] Masquage / révélation de tokens individuels (`SET_TOKEN_VISIBILITY` + bouton 👁 dans `GMPanel`)
 
 ### Mode "Vision par joueur" (raycasting LOS)
 
 - [ ] Chaque joueur a un rayon de vision configurable
 - [ ] Algorithme de raycasting sur la grille Tiled
 - [ ] Les murs bloquent la ligne de vue
-- [ ] Switch GM on/off pour ce mode
+- [x] Switch GM on/off pour ce mode (`losEnabled` + `TOGGLE_FOG` + checkbox "LOS" dans `GMPanel`)
 
 ### ✅ Critères de validation
 
-- En mode révélation globale, les zones cachées sont noires pour les joueurs
-- En mode LOS, chaque joueur ne voit que ce que son token verrait
-- Le GM voit toujours tout, indépendamment des modes actifs
-- Les deux modes peuvent être actifs simultanément
+- [x] En mode révélation globale, les zones cachées sont noires pour les joueurs
+      *(overlay `0x000000` / α 0.55 via `_applyFogState()` — tests TOGGLE_FOG passent)*
+- [ ] En mode LOS, chaque joueur ne voit que ce que son token verrait
+      *(raycasting non implémenté)*
+- [x] Le GM voit toujours tout, indépendamment des modes actifs
+      *(`_applyFogState` + `_applyTokenVisibility` ignorent le fog pour le GM — tests TOGGLE_FOG + SET_TOKEN_VISIBILITY passent)*
+- [ ] Les deux modes peuvent être actifs simultanément
+      *(l'état supporte les deux flags, mais le rendu LOS est absent)*
 
 ---
 
