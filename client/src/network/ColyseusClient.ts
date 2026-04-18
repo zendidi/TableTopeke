@@ -127,6 +127,12 @@ class NetworkManager {
     if (DEBUG_NETWORK) console.log("[NET →] SET_INITIATIVE", { order });
     this.room.send("SET_INITIATIVE", { order });
   }
+
+  // Masque ou révèle un token pour les joueurs non-GM (GM seulement)
+  setTokenVisibility(tokenId: string, visible: boolean): void {
+    if (DEBUG_NETWORK) console.log("[NET →] SET_TOKEN_VISIBILITY", { tokenId, visible });
+    this.room.send("SET_TOKEN_VISIBILITY", { tokenId, visible });
+  }
 }
 
 // Export du singleton pour utilisation dans toutes les scènes

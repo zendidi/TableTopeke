@@ -21,6 +21,7 @@ export class GMPanel {
     private onSetGridVisible: (visible: boolean) => void,
     private initialTileScale: number,
     private onSetInitiative: (order: string[]) => void,
+    private onSetTokenVisibility: (tokenId: string, visible: boolean) => void,
   ) {
     this.container = document.createElement("div");
     this.container.id = "gm-panel";
@@ -195,6 +196,19 @@ export class GMPanel {
         this.onUpdateHp(currentToken.id, newHp);
       });
       row.appendChild(btnPlus);
+
+      // Bouton visibilité token (👁 Masquer / 👁 Afficher)
+      const btnVis = document.createElement("button");
+      btnVis.textContent = token.isVisible ? "👁 Masquer" : "👁 Afficher";
+      Object.assign(btnVis.style, { ...this._btnStyle("#4a4a8b"), marginLeft: "auto" });
+      btnVis.addEventListener("click", () => {
+        const currentToken = this.tokens.get(token.id);
+        if (!currentToken) return;
+        const newVisible = !currentToken.isVisible;
+        this.onSetTokenVisibility(currentToken.id, newVisible);
+        btnVis.textContent = newVisible ? "👁 Masquer" : "👁 Afficher";
+      });
+      row.appendChild(btnVis);
     }
 
     return row;

@@ -552,3 +552,56 @@ describe("DungeonRoom UPDATE_HP — cas limites", () => {
     }).not.toThrow();
   });
 });
+
+// ── SET_TOKEN_VISIBILITY ───────────────────────────────────────────────────
+
+describe("DungeonRoom SET_TOKEN_VISIBILITY", () => {
+  let room: DungeonRoom;
+  let handlers: Map<string, MsgHandler>;
+
+  beforeEach(() => {
+    ({ room, handlers } = createRoom());
+  });
+
+  it("le GM peut masquer un token", () => {
+    (room as any).state.gmSessionId = "gm1";
+
+    const token = new Token();
+    token.isVisible = true;
+    (room as any).state.tokens.set("token1", token);
+
+    handlers.get("SET_TOKEN_VISIBILITY")!({ sessionId: "gm1" }, { tokenId: "token1", visible: false });
+
+    expect(token.isVisible).toBe(false);
+  });
+
+  it("le GM peut révéler un token masqué", () => {
+    (room as any).state.gmSessionId = "gm1";
+
+    const token = new Token();
+    token.isVisible = false;
+    (room as any).state.tokens.set("token1", token);
+
+    handlers.get("SET_TOKEN_VISIBILITY")!({ sessionId: "gm1" }, { tokenId: "token1", visible: true });
+
+    expect(token.isVisible).toBe(true);
+  });
+
+  it("un joueur non-GM ne peut pas modifier la visibilité", () => {
+    const token = new Token();
+    token.isVisible = true;
+    (room as any).state.tokens.set("token1", token);
+
+    handlers.get("SET_TOKEN_VISIBILITY")!({ sessionId: "player1" }, { tokenId: "token1", visible: false });
+
+    expect(token.isVisible).toBe(true);
+  });
+
+  it("token inexistant ignoré sans crash", () => {
+    (room as any).state.gmSessionId = "gm1";
+
+    expect(() => {
+      handlers.get("SET_TOKEN_VISIBILITY")!({ sessionId: "gm1" }, { tokenId: "inexistant", visible: false });
+    }).not.toThrow();
+  });
+});

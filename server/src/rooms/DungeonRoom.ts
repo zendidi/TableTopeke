@@ -83,6 +83,19 @@ export class DungeonRoom extends Room<DungeonState> {
       if (data.losEnabled !== undefined) this.state.losEnabled = data.losEnabled;
     });
 
+    // ── SET_TOKEN_VISIBILITY ──────────────────────────────────────────────────
+    // GM seulement — masque ou révèle un token individuel pour les joueurs
+    this.onMessage("SET_TOKEN_VISIBILITY", (client, data: { tokenId: string; visible: boolean }) => {
+      console.log(`[MSG] SET_TOKEN_VISIBILITY sessionId=${client.sessionId} payload=${JSON.stringify(data)}`);
+      if (this.state.gmSessionId !== client.sessionId) return;
+
+      const token = this.state.tokens.get(data.tokenId);
+      if (!token) return;
+
+      token.isVisible = data.visible;
+      console.log(`[STATE] token ${data.tokenId} isVisible → ${data.visible}`);
+    });
+
     // ── SET_INITIATIVE ────────────────────────────────────────────────────────
     // GM seulement — définit l'ordre d'initiative pour le combat au tour par tour
     this.onMessage("SET_INITIATIVE", (client, data: { order: string[] }) => {

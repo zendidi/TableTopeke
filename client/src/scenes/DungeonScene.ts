@@ -84,6 +84,9 @@ export class DungeonScene extends Phaser.Scene {
   // Overlay de debug léger (HTML overlay) — toggle avec la touche F1, visible pour tous
   private debugOverlay: DebugOverlay | null = null;
 
+  // Overlay semi-transparent affiché pour les joueurs non-GM quand fogEnabled = true
+  private fogOverlay: Phaser.GameObjects.Rectangle | null = null;
+
   // État du scroll caméra via clic droit
   private isDragging: boolean = false;
   private dragStartX: number  = 0;
@@ -177,6 +180,12 @@ export class DungeonScene extends Phaser.Scene {
     // ── Synchronisation des tokens Colyseus ─────────────────────────────────
     this._syncTokens();
 
+    // ── Fog of War global ────────────────────────────────────────────────────
+    this._applyFogState(network.room.state.fogEnabled);
+    network.room.state.listen("fogEnabled", (enabled: boolean) => {
+      this._applyFogState(enabled);
+    });
+
     // ── Initiative Tracker — visible pour tous les joueurs ───────────────────
     this.initiativeTracker = new InitiativeTracker(
       network.room.state.tokens,
@@ -242,6 +251,7 @@ export class DungeonScene extends Phaser.Scene {
         (visible) => this.setGridVisible(visible),
         network.room.state.tileScale,
         (order) => network.setInitiative(order),
+        (tokenId, visible) => network.setTokenVisibility(tokenId, visible),
       );
 
       // Mettre à jour la liste des joueurs lorsqu'un joueur rejoint ou quitte la room
@@ -575,6 +585,12 @@ export class DungeonScene extends Phaser.Scene {
     tokens.onAdd((token: Token, tokenId: string) => {
       this._createTokenSprite(tokenId, token);
 
+      // Appliquer la visibilité initiale
+      this._applyTokenVisibility(tokenId, token);
+
+      // Réagir aux changements de visibilité en temps réel
+      token.listen("isVisible", () => this._applyTokenVisibility(tokenId, token));
+
       // Écoute les changements de position → tween de déplacement
       // Équivalent d'un NetworkTransform Unity avec interpolation
       token.listen("tileX", () => this._tweenToken(tokenId, token));
@@ -655,6 +671,51 @@ export class DungeonScene extends Phaser.Scene {
     this.tokenContainer.add(container);
 
     this.tokenSprites.set(tokenId, container);
+  }
+
+  // Applique la visibilité d'un token selon le rôle du joueur courant.
+  // GM : toujours visible, token masqué affiché en semi-transparent (alpha 0.3).
+  // Joueur : token invisible masqué complètement, sauf son propre token (toujours visible).
+  private _applyTokenVisibility(tokenId: string, token: Token): void {
+    const container = this.tokenSprites.get(tokenId);
+    if (!container) return;
+
+    if (network.isGM) {
+      container.setVisible(true);
+      container.setAlpha(token.isVisible ? 1 : 0.3);
+    } else {
+      const isOwn = token.ownerId === network.room.sessionId;
+      if (isOwn) {
+        container.setVisible(true);
+        container.setAlpha(1);
+      } else {
+        container.setVisible(token.isVisible);
+        container.setAlpha(1);
+      }
+    }
+  }
+
+  // Affiche ou masque l'overlay de brouillard global pour les joueurs non-GM.
+  // Le GM ne voit jamais l'overlay — il voit toujours tout.
+  private _applyFogState(fogEnabled: boolean): void {
+    if (network.isGM) {
+      this.fogOverlay?.setVisible(false);
+      return;
+    }
+
+    if (fogEnabled) {
+      if (!this.fogOverlay) {
+        // Rectangle couvrant la zone visible — mis à jour si la caméra bouge
+        // Depth 6 : au-dessus de la grille (5), sous les tokens (10)
+        this.fogOverlay = this.add.rectangle(0, 0, 99999, 99999, 0x000000, 0.55);
+        this.fogOverlay.setOrigin(0, 0);
+        this.fogOverlay.setDepth(6);
+        this.fogOverlay.setScrollFactor(0); // fixe par rapport à la caméra
+      }
+      this.fogOverlay.setVisible(true);
+    } else {
+      this.fogOverlay?.setVisible(false);
+    }
   }
 
   // Dessine la barre HP avec fond sombre et couleur selon le pourcentage de HP restants
@@ -805,5 +866,7 @@ export class DungeonScene extends Phaser.Scene {
     this.debugPanel = null;
     this.debugOverlay?.destroy();
     this.debugOverlay = null;
+    this.fogOverlay?.destroy();
+    this.fogOverlay = null;
   }
 }
